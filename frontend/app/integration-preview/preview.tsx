@@ -32,7 +32,7 @@ export function BackendPreview() {
     {loading && <p role="status">Loading backend data…</p>}
     {error && <p role="alert">{error}. No simulated data has been substituted.</p>}
     {data && !loading && <>
-      <p role="status">{data.incidents.length} incidents and {data.resources.length} resources returned (up to 100 of each). No live synchronization is enabled.</p>
+      <p role="status">{data.incidents.length} incidents and {data.resources.length} resources returned (bounded pagination). No live synchronization is enabled.</p>
       <h2>Incidents</h2>
       <div style={{overflowX:"auto"}}><table><thead><tr><th scope="col">ID</th><th scope="col">Location</th><th scope="col">Type</th><th scope="col">Severity</th><th scope="col">Phase</th><th scope="col">Priority</th></tr></thead><tbody>
       {data.incidents.map(i=><tr key={i.id}><td>{i.id}</td><td>{i.location}</td><td>{i.type}</td><td>{i.severity}</td><td>{i.operational_phase}</td><td>{i.priority_score??"Unknown"}</td></tr>)}
