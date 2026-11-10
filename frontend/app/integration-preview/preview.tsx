@@ -46,7 +46,7 @@ export function BackendPreview() {
     {error && <p role="alert">{error}. {data ? "Previously loaded data is retained for reference only and must not be treated as current." : "No backend data is available."} No simulated data has been substituted.</p>}
     {data && !loading && <>
       {stale && <p role="alert"><strong>STALE / UNVERIFIED DATA — NOT CURRENT.</strong> Do not use these records for operational decisions.</p>}
-      <p role="status">{data.incidents.length} incidents and {data.resources.length} resources returned (bounded pagination). No live synchronization is enabled.</p>
+      <p role="status">{data.incidents.length} incidents and {data.resources.length} resources returned from one coherent development snapshot. No live synchronization is enabled.</p>
       <p>Snapshot generated: {data.generated_at}. Operational revision: {data.revision}.</p>
       <h2>Incidents</h2>
       <div style={{overflowX:"auto"}}><table><thead><tr><th scope="col">ID</th><th scope="col">Location</th><th scope="col">Type</th><th scope="col">Severity</th><th scope="col">Phase</th><th scope="col">Priority</th></tr></thead><tbody>
@@ -54,7 +54,7 @@ export function BackendPreview() {
       </tbody></table></div>
       <h2>Recommendations</h2>
       <div style={{overflowX:"auto"}}><table><thead><tr><th scope="col">Incident</th><th scope="col">Version</th><th scope="col">State</th><th scope="col">Proposed resources</th></tr></thead><tbody>
-      {data.recommendations.map(r=><tr key={r.incident}><td>{r.incident}</td><td>{r.version}</td><td>{r.state}</td><td>{r.recommended_resources.join(", ")}</td></tr>)}
+      {data.recommendations.map(r=><tr key={`${r.incident}:${r.version}`}><td>{r.incident}</td><td>{r.version}</td><td>{r.state}</td><td>{r.recommended_resources.join(", ")}</td></tr>)}
       </tbody></table></div>
       <h2>Assignment history</h2>
       <div style={{overflowX:"auto"}}><table><thead><tr><th scope="col">Assignment</th><th scope="col">Incident</th><th scope="col">Resource</th><th scope="col">Status</th><th scope="col">Assigned at</th></tr></thead><tbody>
