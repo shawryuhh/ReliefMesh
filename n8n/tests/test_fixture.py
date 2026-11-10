@@ -1,5 +1,6 @@
 """Contract-double tests. These do NOT test Person 2's real backend."""
 import concurrent.futures
+from contextlib import closing
 import copy
 import json
 import sqlite3
@@ -129,7 +130,7 @@ class ContractTests(unittest.TestCase):
     def test_claim_contention_and_expired_lease(self):
         self.event('intake');self.approve(1);c=self.claim(1)
         self.assertEqual(self.f.call('POST',PREFIX+'/automation/commands/'+c['command_id']+'/claim',{'worker_id':'other'},key='other')[0],409)
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             s=json.loads(con.execute('SELECT state FROM fixture').fetchone()[0]);s['commands'][c['command_id']]['lease_until']=0
             con.execute('UPDATE fixture SET state=?',(json.dumps(s),))
         self.assertEqual(self.delivery(c)[1]['code'],'LEASE_EXPIRED')

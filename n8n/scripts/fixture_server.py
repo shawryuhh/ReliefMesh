@@ -4,6 +4,7 @@ SQLite serializes synthetic state/receipts so concurrent delivery and process
 restarts can be tested. This is not Person 2's backend implementation.
 """
 import argparse
+from contextlib import closing
 import copy
 import hashlib
 import json
@@ -48,14 +49,14 @@ def initial():
 class Fixture:
     def __init__(self, db):
         self.db = str(db)
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             con.execute('CREATE TABLE IF NOT EXISTS fixture (id INTEGER PRIMARY KEY, state TEXT)')
             con.execute('INSERT OR IGNORE INTO fixture VALUES (1, ?)', (json.dumps(initial()),))
 
     def call(self, method, path, body=None, actor='automation', key=None):
         body = body or {}
         path = urlsplit(path).path
-        with sqlite3.connect(self.db, timeout=15) as con:
+        with closing(sqlite3.connect(self.db, timeout=15)) as con, con:
             con.execute('BEGIN IMMEDIATE')
             s = json.loads(con.execute('SELECT state FROM fixture WHERE id=1').fetchone()[0])
             before = copy.deepcopy(s)
