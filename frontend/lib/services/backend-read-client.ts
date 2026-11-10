@@ -47,3 +47,32 @@ export async function fetchBackendCollections(): Promise<{ incidents: unknown; r
   ]);
   return { incidents, resources };
 }
+
+/** Read-only collection for assignment history. No mutation endpoints are exposed. */
+export async function fetchBackendAssignments(): Promise<unknown> {
+  return getJson(configuredOrigin(), "/assignments?limit=100");
+}
+
+/** Fetch one current recommendation; 404 is an expected absence, not an outage. */
+export async function fetchBackendRecommendation(incidentId: string): Promise<unknown | null> {
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(incidentId)) throw new BackendReadError("invalid_response");
+  const origin = configuredOrigin();
+  const key = process.env.RELIEFMESH_BACKEND_READ_KEY;
+  let response: Response;
+  try {
+    response = await fetch(origin + "/integration/v1/incidents/" + encodeURIComponent(incidentId) + "/recommendation", {
+      method: "GET", cache: "no-store", redirect: "error",
+      headers: key ? { "X-API-Key": key, Accept: "application/json" } : { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch { throw new BackendReadError("unavailable"); }
+  if (response.status === 404) return null;
+  if (!response.ok) throw new BackendReadError("unavailable");
+  const size = Number(response.headers.get("content-length") ?? "0");
+  if (size > 2_000_000) throw new BackendReadError("invalid_response");
+  let body: string;
+  try { body = await response.text(); } catch { throw new BackendReadError("unavailable"); }
+  if (body.length > 2_000_000) throw new BackendReadError("invalid_response");
+  try { return JSON.parse(body) as unknown; }
+  catch { throw new BackendReadError("invalid_response"); }
+}
