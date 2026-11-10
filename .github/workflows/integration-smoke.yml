@@ -3,7 +3,7 @@ name: ReliefMesh local integration smoke test
 on:
   workflow_dispatch:
   push:
-    branches: [integration]
+    branches: [main, integration]
     paths:
       - 'backend/**'
       - 'frontend/**'
