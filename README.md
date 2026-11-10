@@ -1,8 +1,8 @@
 # ReliefMesh
 ### AI-assisted disaster response coordination | Solo, AI-assisted engineering project
 
-[![Frontend checks](https://github.com/shawryuhh/ReliefMesh/actions/workflows/frontend-checks.yml/badge.svg?branch=integration)](https://github.com/shawryuhh/ReliefMesh/actions)
-[![Backend checks](https://github.com/shawryuhh/ReliefMesh/actions/workflows/backend-checks.yml/badge.svg?branch=integration)](https://github.com/shawryuhh/ReliefMesh/actions)
+[![Frontend checks](https://github.com/shawryuhh/ReliefMesh/actions/workflows/frontend-checks.yml/badge.svg?branch=main)](https://github.com/shawryuhh/ReliefMesh/actions)
+[![Backend checks](https://github.com/shawryuhh/ReliefMesh/actions/workflows/backend-checks.yml/badge.svg?branch=main)](https://github.com/shawryuhh/ReliefMesh/actions)
 
 **ReliefMesh** is an interactive disaster-response command center prototype that combines multilingual incident reporting, priority scoring, resource recommendations, human approval, and a traceable incident lifecycle. Its flagship scenario simulates a Bengaluru flood emergency, an ambulance delay, a replacement recommendation, and successful resolution.
 
