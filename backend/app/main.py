@@ -11,6 +11,7 @@ from app.api.routes import (
     incidents,
     recommendations,
     resources,
+    snapshot_preview,
 )
 from app.core.config import get_settings
 from app.core.exceptions import ConflictError, NotFoundError, ValidationFailedError
@@ -111,3 +112,6 @@ app.include_router(recommendations.router)
 app.include_router(activity_log.router)
 app.include_router(dashboard.router)
 app.include_router(disruptions.router)
+
+# Authenticated read-only development snapshot; not a production sync API.
+app.include_router(snapshot_preview.router)
