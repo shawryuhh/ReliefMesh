@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_db, verify_api_key
 from app.core.config import get_settings
 from app.models.incident import Incident
 from app.models.resource import Resource
@@ -18,7 +18,7 @@ from app.models.recommendation import Recommendation
 from app.models.report import Report
 from app.models.action_log import ActionLog
 
-router = APIRouter(prefix="/integration/v1", tags=["integration"])
+router = APIRouter(prefix="/integration/v1", tags=["integration"], dependencies=[Depends(verify_api_key)])
 
 
 @router.get("/snapshot-preview")
@@ -29,7 +29,6 @@ def snapshot_preview(db: Session = Depends(get_db)):
     if not settings.auth_enabled or not settings.api_key:
         raise HTTPException(status_code=503, detail="Authenticated snapshot preview unavailable")
 
-    # verify_api_key is intentionally applied separately in the route below.
     # SET TRANSACTION must precede the first query in this session.
     db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
     incidents = db.scalars(select(Incident).order_by(Incident.id)).all()
@@ -38,6 +37,8 @@ def snapshot_preview(db: Session = Depends(get_db)):
     recommendations = db.scalars(select(Recommendation).order_by(Recommendation.incident_id, Recommendation.version)).all()
     reports = db.scalars(select(Report).order_by(Report.id)).all()
     events = db.scalars(select(ActionLog).order_by(ActionLog.id)).all()
+    if any(len(rows) > 500 for rows in (incidents, resources, assignments, recommendations, reports, events)):
+        raise HTTPException(status_code=503, detail="Snapshot exceeds development preview limit")
     # Explicitly no monotonic revision yet; callers must not treat this as
     # an incremental synchronization protocol.
     return {
