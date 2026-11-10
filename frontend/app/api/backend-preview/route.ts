@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { previewAllowed } from "../../../lib/services/preview-access";
 import { fetchBackendCollections, fetchBackendAssignments, fetchBackendRecommendation, BackendReadError } from "../../../lib/services/backend-read-client";
 
 // Read-only integration preview. This endpoint does not replace the mock
@@ -53,15 +54,9 @@ function recommendation(v: unknown): v is Record<string, unknown> {
     ["pending","approved","rejected"].includes(String(v.state)) &&
     Array.isArray(v.recommended_resources) && v.recommended_resources.every(text);
 }
-function previewHostAllowed(request: Request): boolean {
-  // Opt-in remote previews require separate access control; this endpoint
-  // deliberately permits only local development hosts.
-  const host = request.headers.get("host")?.split(":")[0]?.toLowerCase();
-  const forwarded = request.headers.get("x-forwarded-host");
-  return !forwarded && (host === "localhost" || host === "127.0.0.1" || host === "[::1]");
-}
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV !== "development" || !previewHostAllowed(request)) {
+  if (!previewAllowed(process.env.NODE_ENV, process.env.RELIEFMESH_ENABLE_READ_PREVIEW,
+    request.headers.get("host"), request.headers.get("x-forwarded-host"))) {
     return NextResponse.json({ error: "local_preview_only" }, { status: 403 });
   }
   // This preview must be explicitly enabled; avoid exposing incident/resource
