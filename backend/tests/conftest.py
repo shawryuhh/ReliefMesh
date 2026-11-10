@@ -84,6 +84,9 @@ def _clean_tables():
     with SessionLocal() as db:
         db.execute(text(f"TRUNCATE TABLE {', '.join(APP_TABLES)} RESTART IDENTITY CASCADE"))
         db.commit()
+    # Reset revision fixture state independently of operational table cleanup.
+    db.execute(text("UPDATE operational_revision SET revision = 0 WHERE id = 1"))
+    db.commit()
     yield
 
 
