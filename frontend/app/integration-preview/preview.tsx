@@ -4,11 +4,11 @@ type Incident = { id:string; location:string; type:string; severity:string; stat
 type Resource = { id:string; location:string; type:string; status:string; capacity:number|null };
 type Assignment = {id:string;incident_id:string;resource_id:string;status:string;assigned_at:string};
 type Recommendation = {incident:string;version:number;state:string;recommended_resources:string[]};
-type Preview = { mode:"read_only_preview"; generated_at:string; revision:null; incidents:Incident[]; resources:Resource[]; assignments:Assignment[]; recommendations:Recommendation[] };
+type Preview = { mode:"read_only_preview"; generated_at:string; revision:number; incidents:Incident[]; resources:Resource[]; assignments:Assignment[]; recommendations:Recommendation[] };
 function isPreview(v: unknown): v is Preview {
   if (!v || typeof v !== "object") return false;
   const p = v as Partial<Preview>;
-  return p.mode === "read_only_preview" && typeof p.generated_at === "string" && p.revision === null && Array.isArray(p.incidents) && Array.isArray(p.resources) && Array.isArray(p.assignments) && Array.isArray(p.recommendations);
+  return p.mode === "read_only_preview" && typeof p.generated_at === "string" && typeof p.revision === "number" && Number.isSafeInteger(p.revision) && p.revision >= 0 && Array.isArray(p.incidents) && Array.isArray(p.resources) && Array.isArray(p.assignments) && Array.isArray(p.recommendations);
 }
 export function BackendPreview() {
   const [data,setData] = useState<Preview|null>(null);
@@ -33,7 +33,7 @@ export function BackendPreview() {
     {error && <p role="alert">{error}. No simulated data has been substituted.</p>}
     {data && !loading && <>
       <p role="status">{data.incidents.length} incidents and {data.resources.length} resources returned (bounded pagination). No live synchronization is enabled.</p>
-      <p>Snapshot generated: {data.generated_at}. Revision tracking is not yet available.</p>
+      <p>Snapshot generated: {data.generated_at}. Operational revision: {data.revision}.</p>
       <h2>Incidents</h2>
       <div style={{overflowX:"auto"}}><table><thead><tr><th scope="col">ID</th><th scope="col">Location</th><th scope="col">Type</th><th scope="col">Severity</th><th scope="col">Phase</th><th scope="col">Priority</th></tr></thead><tbody>
       {data.incidents.map(i=><tr key={i.id}><td>{i.id}</td><td>{i.location}</td><td>{i.type}</td><td>{i.severity}</td><td>{i.operational_phase}</td><td>{i.priority_score??"Unknown"}</td></tr>)}
