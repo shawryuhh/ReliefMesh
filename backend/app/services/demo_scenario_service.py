@@ -206,11 +206,52 @@ BACKGROUND_INCIDENTS: list[tuple[str, str, float, float, str, int, int, int, str
 _DEMO_LOCK = threading.Lock()
 _DEMO_RUNTIME_STATE: dict[str, Any] = {
     "scenario": "normal",
-    "demo_index": 5,
     "busy_resource_ids": {"AMB-06", "HOSP-03"},
-    "blocked_eta_overrides": {},
     "idempotency_keys": {},
 }
+
+
+def _derive_demo_index(db: Session) -> int:
+    """Derives the canonical 0..11 demo step index deterministically from PostgreSQL state."""
+    incident = db.get(Incident, "INC-1042")
+    if incident is None:
+        return 0
+
+    phase = incident.operational_phase
+    if phase in (OperationalPhase.RECEIVED, OperationalPhase.ANALYZING):
+        return 2 if (incident.duplicate_count or 0) > 0 else 1
+    if phase == OperationalPhase.PRIORITIZED:
+        return 3
+    if phase == OperationalPhase.RECOMMENDED:
+        return 4
+    if phase in (OperationalPhase.AWAITING_APPROVAL, OperationalPhase.REJECTED):
+        return 5
+    if phase == OperationalPhase.REPLANNING:
+        return 8
+    if phase == OperationalPhase.AWAITING_REPLACEMENT:
+        return 9
+    if phase == OperationalPhase.RESOLVED:
+        return 11
+
+    latest_rec = db.scalars(
+        select(Recommendation)
+        .where(Recommendation.incident_id == "INC-1042")
+        .order_by(Recommendation.version.desc())
+        .limit(1)
+    ).first()
+    if phase == OperationalPhase.BLOCKED:
+        if (
+            latest_rec is not None
+            and latest_rec.replacement_for_resource_id is not None
+            and latest_rec.state == RecommendationState.REJECTED
+        ):
+            return 9
+        return 7
+    if phase == OperationalPhase.DISPATCHED:
+        if latest_rec is not None and latest_rec.replacement_for_resource_id is not None:
+            return 10
+        return 6
+    return 5
 
 
 def _severity_enum(score: int) -> Severity:
@@ -418,11 +459,9 @@ def reset_demo_database(db: Session, *, for_run: bool = False) -> dict[str, Any]
         )
 
         _DEMO_RUNTIME_STATE["scenario"] = "normal"
-        _DEMO_RUNTIME_STATE["blocked_eta_overrides"] = {}
         _DEMO_RUNTIME_STATE["idempotency_keys"] = {}
 
         if for_run:
-            _DEMO_RUNTIME_STATE["demo_index"] = 0
             bump_operational_revision(db)
             db.commit()
             return get_demo_dashboard_snapshot(db)
@@ -503,7 +542,6 @@ def reset_demo_database(db: Session, *, for_run: bool = False) -> dict[str, Any]
                 )
             )
 
-        _DEMO_RUNTIME_STATE["demo_index"] = 5
         bump_operational_revision(db)
         db.commit()
         return get_demo_dashboard_snapshot(db)
@@ -561,7 +599,7 @@ def execute_demo_step(
         if idempotency_key and idempotency_key in _DEMO_RUNTIME_STATE["idempotency_keys"]:
             return get_demo_dashboard_snapshot(db)
 
-        current_idx = _DEMO_RUNTIME_STATE["demo_index"]
+        current_idx = _derive_demo_index(db)
         expected_step = DEMO_STEPS[current_idx] if current_idx < len(DEMO_STEPS) else None
         if expected_step != step:
             raise ConflictError(
@@ -614,7 +652,6 @@ def execute_demo_step(
                 incident_id="INC-1042",
                 metadata={"id": "INC-1042"},
             )
-            _DEMO_RUNTIME_STATE["demo_index"] = 1
             bump_operational_revision(db)
             db.commit()
 
@@ -632,7 +669,6 @@ def execute_demo_step(
                 incident_id="INC-1042",
                 metadata={"id": "INC-1042", "count": dedup["duplicate_count"]},
             )
-            _DEMO_RUNTIME_STATE["demo_index"] = 2
             bump_operational_revision(db)
             db.commit()
 
@@ -653,7 +689,6 @@ def execute_demo_step(
                 incident_id="INC-1042",
                 metadata={"id": "INC-1042", "priority": scored["priority_score"]},
             )
-            _DEMO_RUNTIME_STATE["demo_index"] = 3
             bump_operational_revision(db)
             db.commit()
 
@@ -707,7 +742,6 @@ def execute_demo_step(
                     "resources": " + ".join(ai_plan["recommended_resources"]),
                 },
             )
-            _DEMO_RUNTIME_STATE["demo_index"] = 4
             bump_operational_revision(db)
             db.commit()
 
@@ -722,7 +756,6 @@ def execute_demo_step(
                 incident_id="INC-1042",
                 metadata={"id": "INC-1042"},
             )
-            _DEMO_RUNTIME_STATE["demo_index"] = 5
             bump_operational_revision(db)
             db.commit()
 
@@ -752,8 +785,6 @@ def execute_demo_step(
                 "INC-1042",
                 DisruptionReport(resource_id="AMB-02", eta_minutes=24, previous_eta_minutes=6),
             )
-            _DEMO_RUNTIME_STATE["blocked_eta_overrides"]["AMB-02"] = 24
-            _DEMO_RUNTIME_STATE["demo_index"] = 7
 
         elif step == "replan":
             if incident is None:
@@ -766,7 +797,6 @@ def execute_demo_step(
                 incident_id="INC-1042",
                 metadata={"id": "INC-1042", "resources": "AMB-02"},
             )
-            _DEMO_RUNTIME_STATE["demo_index"] = 8
             bump_operational_revision(db)
             db.commit()
 
@@ -846,7 +876,6 @@ def execute_demo_step(
                 incident_id="INC-1042",
                 metadata={"id": "INC-1042"},
             )
-            _DEMO_RUNTIME_STATE["demo_index"] = 9
             bump_operational_revision(db)
             db.commit()
 
@@ -856,7 +885,6 @@ def execute_demo_step(
                 "INC-1042",
                 "All three residents evacuated safely from Krishna Apartments Block C.",
             )
-            _DEMO_RUNTIME_STATE["demo_index"] = 11
 
         if idempotency_key:
             _DEMO_RUNTIME_STATE["idempotency_keys"][idempotency_key] = step
@@ -877,10 +905,9 @@ def approve_demo_recommendation(
     if approved_by != "coordinator":
         raise ApprovalRequiredError("Only an authenticated coordinator can approve recommendations.")
 
-    result = recommendation_service.approve_recommendation(
+    recommendation_service.approve_recommendation(
         db, incident_id, RecommendationApprove(version=version), approved_by
     )
-    is_replacement = result.replacementFor is not None
 
     # Populate default ETAs and distances on newly created live assignments
     live_assignments = db.scalars(
@@ -889,16 +916,18 @@ def approve_demo_recommendation(
             Assignment.status.in_((AssignmentStatus.ASSIGNED, AssignmentStatus.ACTIVE)),
         )
     ).all()
+    updated_eta = False
     for a in live_assignments:
         defaults = FLEET_DEFAULTS.get(a.resource_id, {})
         if a.eta_minutes is None and "eta" in defaults:
             a.eta_minutes = defaults["eta"]
+            updated_eta = True
         if a.distance_km is None and "distanceKm" in defaults:
             a.distance_km = defaults["distanceKm"]
-    db.commit()
-
-    if incident_id == "INC-1042":
-        _DEMO_RUNTIME_STATE["demo_index"] = 10 if is_replacement else 6
+            updated_eta = True
+    if updated_eta:
+        bump_operational_revision(db)
+        db.commit()
 
     return get_demo_dashboard_snapshot(db)
 
@@ -1056,7 +1085,6 @@ def get_demo_dashboard_snapshot(db: Session) -> dict[str, Any]:
 
     resources: list[dict[str, Any]] = []
     busy_ids = _DEMO_RUNTIME_STATE["busy_resource_ids"]
-    blocked_etas = _DEMO_RUNTIME_STATE["blocked_eta_overrides"]
     for res in resources_rows:
         defaults = FLEET_DEFAULTS.get(res.id, {})
         live_a = live_assignment_by_resource.get(res.id)
@@ -1076,7 +1104,7 @@ def get_demo_dashboard_snapshot(db: Session) -> dict[str, Any]:
         eta = (
             live_a.eta_minutes
             if live_a and live_a.eta_minutes is not None
-            else blocked_etas.get(res.id, defaults.get("eta"))
+            else defaults.get("eta")
         )
         distance_km = (
             live_a.distance_km
@@ -1218,7 +1246,7 @@ def get_demo_dashboard_snapshot(db: Session) -> dict[str, Any]:
             "stale": scenario == "stale",
             "lastSync": last_sync.isoformat(),
         },
-        "demoIndex": _DEMO_RUNTIME_STATE["demo_index"],
+        "demoIndex": _derive_demo_index(db),
         "scenario": scenario,
         "operationalRevision": current_operational_revision(db),
         "aiEngine": ai_engine_service.get_ai_engine_status(),

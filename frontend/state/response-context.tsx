@@ -74,18 +74,19 @@ export function ResponseProvider({ children }: { children: ReactNode }) {
     finally { actionLock.current = false; setBusy(false); }
   }, [refresh]);
   const switchDataSource = useCallback((next: DemoDataSource) => {
+    version.current++;
+    cancelHandoff();
+    latest.current = null;
+    previous.current = null;
+    setData(null);
     setLoading(true);
     setError(null);
     setDataSourceState(next);
     setDemoDataSource(next);
-  }, []);
+  }, [cancelHandoff]);
   return <ResponseContext.Provider value={{ data, loading, error, selectedId, queueFilter, setQueueFilter, resolutionId, select, refresh, busy, act, notice, dismissNotice: () => setNotice(null), dataSource, switchDataSource }}>{children}</ResponseContext.Provider>;
 }
 export function useResponse() { const ctx = useContext(ResponseContext); if (!ctx) throw new Error("ResponseProvider missing"); return ctx; }
 export async function recoverSimulation() {
-  if (getDemoDataSource() === "backend") {
-    try { await demoService.setScenario("normal"); return; }
-    catch { setDemoDataSource("mock"); }
-  }
   await demoService.setScenario("normal");
 }

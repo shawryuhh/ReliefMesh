@@ -255,3 +255,89 @@ def test_n8n_sync_and_translation_endpoints(client):
     )
     assert bad_tr.status_code == 422
     assert bad_tr.json()["code"] == "TRANSLATION_UNAVAILABLE"
+
+
+def test_resource_counts_across_steps_5_to_11_never_fluctuate(client):
+    """Regression test: verifies availableAmbulances and availableRescueTeams across Steps 0-11.
+
+    Expected:
+    - Before dispatch (Steps 0-5): 5 ambulances, 3 rescue teams available.
+    - After initial approval (Step 6): 4 ambulances, 2 rescue teams available.
+    - During roadblock and replanning (Steps 7-9): remain 4 and 2.
+    - After replacement approval (Step 10): remain 4 and 2.
+    - After resolution (Step 11): return to 5 and 3.
+    """
+    reset_resp = client.post("/integration/v1/demo/reset", json={"for_run": True})
+    assert reset_resp.status_code == 200
+    snap = reset_resp.json()
+    assert snap["demoIndex"] == 0
+    assert snap["metrics"]["availableAmbulances"] == 5
+    assert snap["metrics"]["availableRescueTeams"] == 3
+    prev_rev = snap["operationalRevision"]
+
+    # Steps 1..5 (before dispatch): counts must remain 5 and 3 at every step
+    for expected_idx, step_name in enumerate(
+        ["receive", "merge", "priority", "recommend", "request"], start=1
+    ):
+        resp = client.post("/integration/v1/demo/step", json={"step": step_name})
+        assert resp.status_code == 200
+        snap = resp.json()
+        assert snap["demoIndex"] == expected_idx
+        assert snap["metrics"]["availableAmbulances"] == 5, f"Step {expected_idx} ({step_name})"
+        assert snap["metrics"]["availableRescueTeams"] == 3, f"Step {expected_idx} ({step_name})"
+        assert snap["operationalRevision"] > prev_rev
+        prev_rev = snap["operationalRevision"]
+
+    # Step 6 (initial approval): counts drop to 4 ambulances and 2 rescue teams
+    approve_v1 = client.post(
+        "/integration/v1/demo/incidents/INC-1042/approve",
+        json={"version": 1},
+    )
+    assert approve_v1.status_code == 200
+    snap = approve_v1.json()
+    assert snap["demoIndex"] == 6
+    assert snap["metrics"]["availableAmbulances"] == 4
+    assert snap["metrics"]["availableRescueTeams"] == 2
+    assert snap["operationalRevision"] > prev_rev
+    prev_rev = snap["operationalRevision"]
+
+    # Steps 7..9 (roadblock and replanning): counts MUST remain 4 and 2 throughout
+    for expected_idx, step_name in enumerate(["block", "replan", "replace"], start=7):
+        resp = client.post("/integration/v1/demo/step", json={"step": step_name})
+        assert resp.status_code == 200
+        snap = resp.json()
+        assert snap["demoIndex"] == expected_idx
+        assert snap["metrics"]["availableAmbulances"] == 4, f"Step {expected_idx} ({step_name})"
+        assert snap["metrics"]["availableRescueTeams"] == 2, f"Step {expected_idx} ({step_name})"
+        assert snap["operationalRevision"] > prev_rev
+        prev_rev = snap["operationalRevision"]
+
+        # Subsequent GET /demo/snapshot polls must also report identical counts and demoIndex
+        polled = client.get("/integration/v1/demo/snapshot").json()
+        assert polled["demoIndex"] == expected_idx
+        assert polled["metrics"]["availableAmbulances"] == 4
+        assert polled["metrics"]["availableRescueTeams"] == 2
+
+    # Step 10 (replacement approval: AMB-02 released, AMB-05 dispatched, RESCUE-01 continues):
+    # counts MUST remain 4 and 2
+    approve_v2 = client.post(
+        "/integration/v1/demo/incidents/INC-1042/approve",
+        json={"version": 2},
+    )
+    assert approve_v2.status_code == 200
+    snap = approve_v2.json()
+    assert snap["demoIndex"] == 10
+    assert snap["metrics"]["availableAmbulances"] == 4
+    assert snap["metrics"]["availableRescueTeams"] == 2
+    assert snap["operationalRevision"] > prev_rev
+    prev_rev = snap["operationalRevision"]
+
+    # Step 11 (resolution): counts return to 5 and 3
+    resolve_resp = client.post("/integration/v1/demo/step", json={"step": "resolve"})
+    assert resolve_resp.status_code == 200
+    snap = resolve_resp.json()
+    assert snap["demoIndex"] == 11
+    assert snap["metrics"]["availableAmbulances"] == 5
+    assert snap["metrics"]["availableRescueTeams"] == 3
+    assert snap["operationalRevision"] > prev_rev
+

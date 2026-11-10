@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createMockService } from "../lib/mocks/service.ts";
+import { createBackendDemoService, getDemoDataSource, setDemoDataSource } from "../lib/api/index.ts";
 import { demoSteps } from "../types/index.ts";
 
 test("canonical crisis: initial approval, obstruction, replacement approval, resolution, reset", async () => {
@@ -108,4 +109,44 @@ test("replacement versions stay newer than modified initial plans", async () => 
   assert.equal((await s.getRecommendation("INC-1042"))?.version, 3);
   await assert.rejects(s.approveRecommendation("INC-1042", 2), /error.stalePlan/);
   await s.approveRecommendation("INC-1042", 3);
+});
+
+test("backend demo service never caches stale snapshots and switching modes never silently substitutes counts", async () => {
+  let backendAmbulances = 4;
+  let backendRescue = 2;
+  let shouldFail = false;
+  const mockSeed = await createMockService().getDashboard();
+
+  const fakeFetch: typeof fetch = async () => {
+    if (shouldFail) {
+      return new Response(JSON.stringify({ ok: false, errorCode: "error.api" }), { status: 502 });
+    }
+    const snap = structuredClone(mockSeed);
+    snap.metrics.availableAmbulances = backendAmbulances;
+    snap.metrics.availableRescueTeams = backendRescue;
+    return new Response(JSON.stringify({ ok: true, snapshot: snap }), { status: 200 });
+  };
+
+  const backendService = createBackendDemoService(fakeFetch);
+  const first = await backendService.getDashboard();
+  assert.equal(first.metrics.availableAmbulances, 4);
+  assert.equal(first.metrics.availableRescueTeams, 2);
+
+  // Subsequent reads reflect live backend changes rather than a cached snapshot
+  backendAmbulances = 5;
+  backendRescue = 3;
+  const second = await backendService.getDashboard();
+  assert.equal(second.metrics.availableAmbulances, 5);
+  assert.equal(second.metrics.availableRescueTeams, 3);
+
+  // Backend failure surfaces ServiceError and never substitutes mock data or changes data source
+  const prevSource = getDemoDataSource();
+  try {
+    setDemoDataSource("backend");
+    shouldFail = true;
+    await assert.rejects(backendService.getDashboard(), /error.api/);
+    assert.equal(getDemoDataSource(), "backend");
+  } finally {
+    setDemoDataSource(prevSource);
+  }
 });

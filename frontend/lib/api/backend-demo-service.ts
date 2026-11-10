@@ -13,7 +13,6 @@ export function createBackendDemoService(
   endpoint = "/api/backend-demo"
 ): ReliefService & DemoService {
   const listeners = new Set<() => void>();
-  let cachedSnapshot: DashboardSnapshot | null = null;
   const emit = () => {
     listeners.forEach(fn => fn());
   };
@@ -38,7 +37,6 @@ export function createBackendDemoService(
     if (!response.ok || !body.ok || !body.snapshot) {
       throw new ServiceError(body.errorCode || "error.api");
     }
-    cachedSnapshot = structuredClone(body.snapshot);
     return structuredClone(body.snapshot);
   }
 
@@ -69,13 +67,6 @@ export function createBackendDemoService(
     if (!response.ok || !body.ok || body.data === undefined) {
       throw new ServiceError(body.errorCode || "error.api");
     }
-    if (
-      typeof body.data === "object" &&
-      body.data !== null &&
-      "incidents" in (body.data as Record<string, unknown>)
-    ) {
-      cachedSnapshot = structuredClone(body.data as unknown as DashboardSnapshot);
-    }
     return body.data;
   }
 
@@ -84,7 +75,7 @@ export function createBackendDemoService(
       return fetchSnapshot();
     },
     async getIncidents() {
-      const snap = cachedSnapshot ?? (await fetchSnapshot());
+      const snap = await fetchSnapshot();
       return structuredClone(snap.incidents);
     },
     async getIncident(id: string) {

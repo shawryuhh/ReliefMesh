@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { demoSteps } from "@/types";
 import { demoService } from "@/lib/api";
-import { nextAutomaticDemoStep } from "@/lib/presentation/demo-playback";
+import { nextAutomaticDemoStep, shouldResetOnDemoStart } from "@/lib/presentation/demo-playback";
 import { useResponse } from "@/state/response-context";
 export function useDemo() {
   const { data, act, select } = useResponse();
@@ -21,10 +21,13 @@ export function useDemo() {
     if (starting.current || running) return;
     starting.current = true; stop(); const current = generation.current;
     try {
-      const ok = await act(() => demoService.reset(true));
-      // A pause/reset/unmount while a future network adapter is awaiting must
-      // not allow its late reset response to resurrect playback.
-      if (ok && current === generation.current) { select("INC-1042"); setRunning(true); }
+      if (shouldResetOnDemoStart(data)) {
+        const ok = await act(() => demoService.reset(true));
+        // A pause/reset/unmount while a future network adapter is awaiting must
+        // not allow its late reset response to resurrect playback.
+        if (!ok || current !== generation.current) return;
+      }
+      if (current === generation.current) { select("INC-1042"); setRunning(true); }
     } finally { starting.current = false; }
   };
   const reset = async (forRun = false) => {

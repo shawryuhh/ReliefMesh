@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createMockService } from "../lib/mocks/service.ts";
 import { demoSteps, eventTypes } from "../types/index.ts";
-import { nextAutomaticDemoStep } from "../lib/presentation/demo-playback.ts";
+import { nextAutomaticDemoStep, shouldResetOnDemoStart } from "../lib/presentation/demo-playback.ts";
 import { incidentPresentation } from "../lib/presentation/incident-state.ts";
 import { isActiveIncident, nextActiveIncidentId, queueIncidents } from "../lib/presentation/incident-queue.ts";
 async function completeDemo() {
@@ -79,4 +79,54 @@ test("intentional restart resets cleanly and concurrent repeated receive cannot 
   data = await service.getDashboard(); assert.equal(data.demoIndex,1);
   assert.equal(data.incidents.filter(i=>i.id==="INC-1042").length,1);
   assert.equal(data.activity.filter(e=>e.type==="incident_received").length,1);
+});
+test("clicking Run demo after initial dispatch resumes from Step 6 without resetting resource counts to 5 and 3", async () => {
+  const service = createMockService();
+  // Step 5 (initial awaiting_approval state): 5 ambulances, 3 rescue teams
+  let data = await service.getDashboard();
+  assert.equal(data.demoIndex, 5);
+  assert.equal(data.metrics.availableAmbulances, 5);
+  assert.equal(data.metrics.availableRescueTeams, 3);
+  assert.equal(shouldResetOnDemoStart(data), true);
+
+  // Coordinator approves initial dispatch -> Step 6 (dispatched): 4 ambulances, 2 rescue teams
+  await service.approveRecommendation("INC-1042", 1);
+  data = await service.getDashboard();
+  assert.equal(data.demoIndex, 6);
+  assert.equal(data.metrics.availableAmbulances, 4);
+  assert.equal(data.metrics.availableRescueTeams, 2);
+
+  // Clicking "Run demo" following initial dispatch MUST NOT reset the scenario
+  assert.equal(shouldResetOnDemoStart(data), false);
+
+  // Autoplay advances through Steps 7, 8, 9 (block -> replan -> replace); counts remain 4 and 2
+  for (const expectedStep of ["block", "replan", "replace"] as const) {
+    const autoStep = nextAutomaticDemoStep(data, true);
+    assert.equal(autoStep, expectedStep);
+    await service.step(autoStep!);
+    data = await service.getDashboard();
+    assert.equal(data.metrics.availableAmbulances, 4, `after ${expectedStep}`);
+    assert.equal(data.metrics.availableRescueTeams, 2, `after ${expectedStep}`);
+    assert.equal(shouldResetOnDemoStart(data), false, `should not reset after ${expectedStep}`);
+  }
+  assert.equal(data.demoIndex, 9);
+  assert.equal(nextAutomaticDemoStep(data, true), undefined);
+
+  // Coordinator approves replacement -> Step 10: counts remain 4 and 2, and Run demo still does not reset
+  await service.approveRecommendation("INC-1042", 2);
+  data = await service.getDashboard();
+  assert.equal(data.demoIndex, 10);
+  assert.equal(data.metrics.availableAmbulances, 4);
+  assert.equal(data.metrics.availableRescueTeams, 2);
+  assert.equal(shouldResetOnDemoStart(data), false);
+
+  // Autoplay executes Step 11 (resolve): counts return to 5 and 3, and Run demo again resets
+  const finalStep = nextAutomaticDemoStep(data, true);
+  assert.equal(finalStep, "resolve");
+  await service.step(finalStep!);
+  data = await service.getDashboard();
+  assert.equal(data.demoIndex, 11);
+  assert.equal(data.metrics.availableAmbulances, 5);
+  assert.equal(data.metrics.availableRescueTeams, 3);
+  assert.equal(shouldResetOnDemoStart(data), true);
 });
