@@ -17,6 +17,7 @@ from app.models.enums import OperationalPhase
 from app.schemas.disruption import DisruptionReport
 from app.schemas.incident import IncidentResponse
 from app.services.action_log_service import record_action
+from app.services.operational_revision import bump_operational_revision
 from app.services.assignment_service import LIVE_ASSIGNMENT_STATUSES, TERMINAL_INCIDENT_STATUSES, lock_incident
 from app.services.incident_service import to_response as incident_to_response
 from app.services.state_machine import assert_phase_allows
@@ -69,6 +70,8 @@ def report_disruption(db: Session, incident_id: str, payload: DisruptionReport) 
             assignment_id=assignment.id,
             metadata=metadata,
         )
+
+        bump_operational_revision(db)
 
         db.commit()
         db.refresh(incident)
