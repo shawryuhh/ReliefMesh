@@ -206,5 +206,13 @@
   "route.disruption": "سڑک بند",
   "route.replanning": "دوبارہ منصوبہ بندی",
   "decision.replacementApproved": "متبادل منصوبہ منظور ہو گیا",
-  "map.assignmentLines": "ٹوٹی لکیریں تعیناتی دکھاتی ہیں، سڑک کے راستے نہیں"
+  "map.assignmentLines": "ٹوٹی لکیریں تعیناتی دکھاتی ہیں، سڑک کے راستے نہیں",
+  "queue.active": "فعال واقعات",
+  "queue.history": "حل شدہ / تاریخ",
+  "queue.emptyActive": "توجہ طلب کوئی فعال واقعہ نہیں",
+  "history.readOnly": "تاریخ · صرف مطالعہ",
+  "resolution.complete": "امدادی کارروائی مکمل",
+  "resolution.people": "رپورٹ میں افراد",
+  "resolution.next": "جلد فعال فہرست پر واپس جائیں گے",
+  "demo.runAgain": "ڈیمو دوبارہ چلائیں"
 }

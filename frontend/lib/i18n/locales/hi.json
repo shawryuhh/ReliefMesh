@@ -206,5 +206,13 @@
   "route.disruption": "सड़क अवरुद्ध",
   "route.replanning": "पुनः योजना",
   "decision.replacementApproved": "प्रतिस्थापन स्वीकृत",
-  "map.assignmentLines": "टूटी रेखाएँ आवंटन दिखाती हैं, सड़क मार्ग नहीं"
+  "map.assignmentLines": "टूटी रेखाएँ आवंटन दिखाती हैं, सड़क मार्ग नहीं",
+  "queue.active": "सक्रिय घटनाएँ",
+  "queue.history": "समाधान / इतिहास",
+  "queue.emptyActive": "ध्यान देने योग्य कोई सक्रिय घटना नहीं",
+  "history.readOnly": "इतिहास · केवल पढ़ने के लिए",
+  "resolution.complete": "प्रतिक्रिया पूरी हुई",
+  "resolution.people": "रिपोर्ट में लोगों की संख्या",
+  "resolution.next": "शीघ्र ही सक्रिय घटनाओं की सूची पर लौटेंगे",
+  "demo.runAgain": "डेमो फिर चलाएँ"
 }

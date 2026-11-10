@@ -1,5 +1,7 @@
 # ReliefMesh frontend integration contract
 
+For the later backend/AI source comparison and proposed team alignment, see [TEAM_INTEGRATION_PLAN.md](TEAM_INTEGRATION_PLAN.md) and [TEAM_CONTRACT_INVENTORY.md](TEAM_CONTRACT_INVENTORY.md). The branch inventory below records the original inspection; the TypeScript service contract remains unchanged.
+
 ## Current integration status
 
 The inspected repository is `shawryuhh/HackSprint`. The frontend baseline for this pass is `b8714c7`. All remote heads were fetched explicitly because the local clone originally had a single-branch fetch refspec.

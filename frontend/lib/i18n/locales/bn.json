@@ -206,5 +206,13 @@
   "route.disruption": "রাস্তা অবরুদ্ধ",
   "route.replanning": "পুনঃপরিকল্পনা",
   "decision.replacementApproved": "বিকল্প পরিকল্পনা অনুমোদিত",
-  "map.assignmentLines": "ড্যাশ রেখা বরাদ্দ দেখায়, সড়কপথ নয়"
+  "map.assignmentLines": "ড্যাশ রেখা বরাদ্দ দেখায়, সড়কপথ নয়",
+  "queue.active": "সক্রিয় ঘটনা",
+  "queue.history": "সমাধান / ইতিহাস",
+  "queue.emptyActive": "মনোযোগ প্রয়োজন এমন সক্রিয় ঘটনা নেই",
+  "history.readOnly": "ইতিহাস · শুধু পড়ার জন্য",
+  "resolution.complete": "সাড়া দেওয়া সম্পূর্ণ",
+  "resolution.people": "প্রতিবেদনে উল্লিখিত মানুষ",
+  "resolution.next": "শীঘ্রই সক্রিয় তালিকায় ফিরবে",
+  "demo.runAgain": "ডেমো আবার চালান"
 }

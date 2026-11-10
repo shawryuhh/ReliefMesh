@@ -105,3 +105,15 @@
 .detail-status-row { flex-wrap: wrap; gap: 4px 8px; }
 .detail-status-row .severity { margin-inline-start: auto; }
 .detail-header .detail-status-row .badge { padding: 3px 5px; }
+/* Terminal incidents retain evidence without demanding active attention. */
+.resolution-summary{padding:14px;background:#edf6ef;border-top:2px solid #5a9270;animation:enter-soft var(--motion-base) var(--motion-ease)}
+.resolution-summary h3{display:flex;align-items:center;gap:7px;font-size:14px;color:#265c3d;line-height:1.45}
+.resolution-summary h3 svg{flex-shrink:0}.resolution-summary p{font-size:11px;line-height:1.6;margin-top:6px;color:#3d5b48}
+.resolution-summary .resolution-next{font-size:10px;color:#557260}.resolution-summary .text-link{margin-top:9px}
+.history-marker{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#526b62}
+.detail-history .next-action{background:#f1f5f2;border-color:#87a193}.detail-history .next-action strong{color:#42604c}
+.detail-history .recommendation-section{animation:none}.detail-history .incident-facts dd{color:#52655c}
+.marker-resolved{opacity:.55!important;box-shadow:none!important}.marker-resolved:before{display:none!important}
+.empty-operational{display:grid;place-items:center}.empty-operational .state-message{color:#3a7553}
+.demo-complete .demo-bar{border-color:#8cbaa0;background:#edf6ef}.demo-complete .demo-status-icon{background:#dceee1;color:#306d48}
+@media(prefers-reduced-motion:reduce){.resolution-summary{animation:none}}

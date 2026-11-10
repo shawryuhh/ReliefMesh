@@ -42,9 +42,9 @@ export default function LeafletMap() {
       return marker;
     };
     data.incidents.forEach(i => {
-      const level = i.status === "resolved" ? "resolved" : i.severity >= 5 ? "critical" : i.severity >= 4 ? "high" : "moderate";
+      const level = ["resolved","rejected"].includes(i.status) ? "resolved" : i.severity >= 5 ? "critical" : i.severity >= 4 ? "high" : "moderate";
       const title = `${i.id} · ${i.location} · ${t("incident.priority")} ${i.priority}`;
-      const marker = upsert(i.id,[i.latitude,i.longitude],`incident-marker marker-${level} ${selectedId === i.id ? "marker-selected" : "marker-muted"} ${selectedId === i.id && lastSelected.current !== selectedId ? "marker-pulse" : ""}`,`<span>${i.status === "resolved" ? "✓" : i.severity}</span>`,[29,29],title); marker.setZIndexOffset(selectedId === i.id ? 1000 : 100);
+      const marker = upsert(i.id,[i.latitude,i.longitude],`incident-marker marker-${level} ${selectedId === i.id && !["resolved","rejected"].includes(i.status) ? "marker-selected" : "marker-muted"} ${selectedId === i.id && !["resolved","rejected"].includes(i.status) && lastSelected.current !== selectedId ? "marker-pulse" : ""}`,`<span>${i.status === "resolved" ? "✓" : i.status === "rejected" ? "×" : i.severity}</span>`,[29,29],title); marker.setZIndexOffset(selectedId === i.id ? 1000 : 100);
       const content = document.createElement("div"); content.className = "map-popup";
       const strong = document.createElement("strong"); strong.textContent = i.id; strong.dir = "ltr";
       const name = document.createElement("p"); name.textContent = i.location;

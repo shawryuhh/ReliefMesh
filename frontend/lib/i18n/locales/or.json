@@ -206,5 +206,13 @@
   "route.disruption": "ରାସ୍ତା ଅବରୋଧ",
   "route.replanning": "ପୁନଃ ଯୋଜନା",
   "decision.replacementApproved": "ବିକଳ୍ପ ଯୋଜନା ଅନୁମୋଦିତ",
-  "map.assignmentLines": "ଡ୍ୟାସ୍ ରେଖା ନିୟୋଜନ ଦେଖାଏ, ସଡ଼କ ପଥ ନୁହେଁ"
+  "map.assignmentLines": "ଡ୍ୟାସ୍ ରେଖା ନିୟୋଜନ ଦେଖାଏ, ସଡ଼କ ପଥ ନୁହେଁ",
+  "queue.active": "ସକ୍ରିୟ ଘଟଣା",
+  "queue.history": "ସମାଧାନ / ଇତିହାସ",
+  "queue.emptyActive": "ଧ୍ୟାନ ଆବଶ୍ୟକ କରୁଥିବା କୌଣସି ସକ୍ରିୟ ଘଟଣା ନାହିଁ",
+  "history.readOnly": "ଇତିହାସ · କେବଳ ପଢ଼ିବା ପାଇଁ",
+  "resolution.complete": "ପ୍ରତିକ୍ରିୟା ସମ୍ପୂର୍ଣ୍ଣ",
+  "resolution.people": "ରିପୋର୍ଟରେ ଥିବା ଲୋକ",
+  "resolution.next": "ଶୀଘ୍ର ସକ୍ରିୟ ତାଲିକାକୁ ଫେରିବ",
+  "demo.runAgain": "ଡେମୋ ପୁଣି ଚଲାନ୍ତୁ"
 }

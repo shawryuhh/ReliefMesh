@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "event_id": "demo-run-01-complete-01",
+  "event_type": "response_completed",
+  "occurred_at": "2026-09-20T10:00:00Z",
+  "source": "synthetic-demo",
+  "correlation_id": "demo-run-01",
+  "incident_id": "INC-1042",
+  "expected_version": 2,
+  "payload": {
+    "assignment_ids": [
+      "ASG-888",
+      "ASG-889"
+    ],
+    "evidence": "simulated responder completion"
+  }
+}

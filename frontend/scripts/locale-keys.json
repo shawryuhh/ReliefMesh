@@ -206,5 +206,13 @@
   "route.disruption": "blocked",
   "route.replanning": "replanning",
   "decision.replacementApproved": "decision.replacementApproved",
-  "map.assignmentLines": "map.assignmentLines"
+  "map.assignmentLines": "map.assignmentLines",
+  "queue.active": "queue.active",
+  "queue.history": "queue.history",
+  "queue.emptyActive": "queue.emptyActive",
+  "history.readOnly": "history.readOnly",
+  "resolution.complete": "resolution.complete",
+  "resolution.people": "resolution.people",
+  "resolution.next": "resolution.next",
+  "demo.runAgain": "demo.runAgain"
 }

@@ -206,5 +206,13 @@
   "route.disruption": "পথ অৱৰোধ",
   "route.replanning": "পুনৰ পৰিকল্পনা",
   "decision.replacementApproved": "বিকল্প পৰিকল্পনা অনুমোদিত",
-  "map.assignmentLines": "ডেশ ৰেখাই নিয়োগ দেখুৱায়, পথৰ দিশ নহয়"
+  "map.assignmentLines": "ডেশ ৰেখাই নিয়োগ দেখুৱায়, পথৰ দিশ নহয়",
+  "queue.active": "সক্ৰিয় ঘটনা",
+  "queue.history": "সমাধান / ইতিহাস",
+  "queue.emptyActive": "মনোযোগৰ প্ৰয়োজন হোৱা সক্ৰিয় ঘটনা নাই",
+  "history.readOnly": "ইতিহাস · কেৱল পঢ়াৰ বাবে",
+  "resolution.complete": "সঁহাৰি সম্পূৰ্ণ",
+  "resolution.people": "প্ৰতিবেদনত থকা লোক",
+  "resolution.next": "সোনকালে সক্ৰিয় তালিকালৈ উভতিব",
+  "demo.runAgain": "ডেমো আকৌ চলাওক"
 }

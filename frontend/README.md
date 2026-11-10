@@ -39,7 +39,7 @@ The initial dashboard contains ten fictional Bengaluru-area incidents and 19 ope
 3. `AMB-02` and `RESCUE-01` become dispatched. Available-resource metrics and audit records update.
 4. The next timed stages show the road obstruction, AMB-02's ETA changing from 6 to 24 minutes, replanning and the proposed `AMB-05` replacement (ETA 9 minutes).
 5. The sequence **pauses again**. Click **Approve replacement**. AMB-05 dispatches, AMB-02 is released, and RESCUE-01 stays assigned.
-6. The final timed stage resolves the incident and releases the remaining responders. The audit log remains visible.
+6. The final timed stage resolves the incident and releases the remaining responders. A calm completion summary stays visible for five seconds, then selects the highest-priority remaining active incident. Open **Resolved / History** to review the completed case and its full audit trail. Playback stops until you explicitly choose **Run demo again**.
 
 **Reset demo** restores the original ready-for-approval dashboard, including the initial resource statuses and ETAs. The expanded **Demo controls → Start from report intake** resets to the pre-report state for manual stepping. Only the next valid step is enabled. Pause stops future timed transitions; Run demo starts a new run.
 
@@ -50,7 +50,7 @@ The road obstruction is a **scripted AMB-02 scenario**, not a route planner. If 
 ## Interface
 
 - Overview: live-derived metrics, Leaflet/OpenStreetMap map, priority-sorted incident queue, structured incident detail, recommendation and audit timeline.
-- Incidents: searchable/filterable incident list with synchronized details.
+- Incidents: searchable, priority-sorted **Active incidents** queue by default; approval, critical, **Resolved / History** and all-case filters. History includes resolved and rejected cases without active approval controls. With no active cases, the workspace shows a clear operational empty state.
 - Resources: category and availability filters; capabilities, capacity, assignment and ETA.
 - Audit trail: timestamped events, sources, incident IDs and event metadata; source filtering.
 - Demo controls: manual lifecycle steps plus loading, API failure, no incidents, no available resources, offline automation and stale-data scenarios.
@@ -63,7 +63,7 @@ The map is loaded only on the client (`next/dynamic`, `ssr: false`). It uses nor
 
 First launch shows 13 native-script language cards: English, Hindi, Kannada, Tamil, Telugu, Malayalam, Marathi, Bengali, Gujarati, Punjabi, Urdu, Assamese and Odia. A supported browser locale is preselected, but Continue is always required before entering. A saved choice skips onboarding on later visits. The header selector changes language immediately. Urdu changes document direction; operational identifiers remain unchanged. Storage failures do not prevent selection. Bundled Noto fonts support every script without external font requests.
 
-`lib/i18n/en.ts` defines 208 interface keys. The 12 JSON catalogs contain every key; missing-key coverage is verified by `tests/locales.test.ts`. Catalog wording is intentionally compact, and should receive native-speaker review before any real deployment. Place names and original user reports remain as data, not interface translations.
+`lib/i18n/en.ts` defines 216 interface keys. The 12 JSON catalogs contain every key; missing-key coverage is verified by `tests/locales.test.ts`. Catalog wording is intentionally compact, and should receive native-speaker review before any real deployment. Place names and original user reports remain as data, not interface translations.
 
 Report translation is a separate `translateReport()` service. The canonical English report has fixed translations for all 13 languages. INC-1040 also demonstrates a Hindi original with a stored English translation. Other report/language pairs explicitly report unavailable mock translation; the frontend does not invent translations. Originals are never overwritten.
 
@@ -71,7 +71,9 @@ The latest presentation polish makes the replacement ETA comparison visible dire
 
 ## Architecture and integration
 
-See [INTEGRATION_CONTRACT.md](INTEGRATION_CONTRACT.md) for every service method, response type, failure case and teammate integration requirement. No teammate backend/AI/automation branch was published at inspection.
+Start with [TEAM_INTEGRATION_PLAN.md](TEAM_INTEGRATION_PLAN.md) for each person’s next tasks, P0 blockers, proposed wire contracts and acceptance tests. [TEAM_CONTRACT_INVENTORY.md](TEAM_CONTRACT_INVENTORY.md) records what the current backend and AI code actually implement. These are planning documents; the frontend still uses its existing mock service.
+
+See [INTEGRATION_CONTRACT.md](INTEGRATION_CONTRACT.md) for every service method, response type, failure case and teammate integration requirement. The later completion-fix inspection found new `backend` and `ai/ml` branches; see [RESOLUTION_FIX.md](RESOLUTION_FIX.md) for the read-only findings and contract mismatches. Neither branch is merged or connected.
 
 ```text
 Components → Response context/hooks → ReliefService interface → local mock adapter
@@ -120,7 +122,7 @@ Next.js may generate `AGENTS.md` and `CLAUDE.md` development guidance automatica
 ## Verification and remaining limits
 
 - Production build and TypeScript checks passed.
-- Nine automated tests passed, including all original domain and locale tests plus startup-language and state-derived next-action coverage.
+- Fourteen automated tests passed: the existing nine plus five terminal-lifecycle, history/filtering, selection, scheduling-eligibility and explicit-restart tests. See [RESOLUTION_FIX.md](RESOLUTION_FIX.md) for the targeted completion diagnosis and verification.
 - Chromium browser checks passed for both approval gates and the full canonical demo; language onboarding/persistence in English, Hindi, Kannada, Tamil and Urdu; map selection, section navigation, Modify/Reject, dialog Tab wrapping, resources/audit views, reduced motion, desktop sizes and a 390px mobile viewport.
 - No application JavaScript errors were observed. External map tiles were unavailable in the test environment; the fallback message and local markers worked. Basemap rendering with successful tile downloads remains unverified.
 - Basemap tiles require internet; no real routing, translations, AI decisions, dispatch, persistent storage or external automation is implemented.

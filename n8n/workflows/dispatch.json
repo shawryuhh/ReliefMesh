@@ -1,0 +1,394 @@
+{
+  "id": "ReliefMeshFixturedispatch",
+  "name": "ReliefMesh FIXTURE 02 Authorized dispatch and replacement",
+  "active": false,
+  "nodes": [
+    {
+      "id": "682f54c2f3344c780edf95f0b9a3fa27",
+      "name": "Manual trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "843dfc2f1ddf05a1442f2a1ec15bc826",
+      "name": "Validate and lock fixture mode",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Shared pure logic embedded verbatim in exports and exercised by tests.\n// No filesystem, network, environment or credentials inside Code nodes.\nfunction assert(ok, code) { if (!ok) throw new Error(code); }\nfunction stableId(value) { return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(value); }\nfunction normalizeEvent(input, kind) {\n  const b = JSON.parse(JSON.stringify(input));\n  assert(b.schema_version === 1 && b.event_type === kind, 'INVALID_EVENT_TYPE');\n  assert(stableId(b.event_id) && stableId(b.correlation_id), 'STABLE_SOURCE_ID_REQUIRED');\n  assert(typeof b.source === 'string' && b.source.trim() === 'synthetic-demo', 'FIXTURE_SOURCE_REQUIRED');\n  b.source = b.source.trim();\n  assert(typeof b.occurred_at === 'string' && /(Z|[+-]\\d\\d:\\d\\d)$/.test(b.occurred_at) && Number.isFinite(Date.parse(b.occurred_at)), 'INVALID_TIMESTAMP');\n  b.occurred_at = new Date(b.occurred_at).toISOString();\n  const p = b.payload;\n  assert(p && typeof p === 'object' && !Array.isArray(p), 'INVALID_PAYLOAD');\n  if (kind === 'report_received') {\n    assert(!('incident_id' in b) && !('expected_version' in b), 'BACKEND_OWNS_INCIDENT');\n    assert(stableId(p.source_report_id) && p.channel === 'synthetic', 'INVALID_SOURCE_REPORT');\n    assert(typeof p.originalText === 'string' && p.originalText.trim().length > 0 && p.originalText.length <= 10000, 'INVALID_ORIGINAL_TEXT');\n    assert(['en','hi','kn','ta','te','ml','mr','bn','gu','pa','ur','as','or'].includes(p.originalLanguage), 'INVALID_ORIGINAL_LANGUAGE');\n    assert(typeof p.receivedAt === 'string' && /(Z|[+-]\\d\\d:\\d\\d)$/.test(p.receivedAt) && Number.isFinite(Date.parse(p.receivedAt)), 'INVALID_RECEIVED_AT');\n  } else {\n    assert(stableId(b.incident_id) && Number.isInteger(b.expected_version) && b.expected_version > 0, 'INCIDENT_VERSION_REQUIRED');\n    if (kind === 'road_obstruction') {\n      assert(stableId(p.assignment_id) && stableId(p.resource_id), 'ASSIGNMENT_REQUIRED');\n      assert(Number.isFinite(p.previous_eta_minutes) && p.previous_eta_minutes >= 0 && Number.isFinite(p.eta_minutes) && p.eta_minutes >= 0 && p.reason_code === 'road_blocked', 'INVALID_ETA');\n    } else {\n      assert(Array.isArray(p.assignment_ids) && p.assignment_ids.length > 0 && p.assignment_ids.every(stableId) && new Set(p.assignment_ids).size === p.assignment_ids.length, 'ASSIGNMENTS_REQUIRED');\n      assert(p.evidence === 'simulated responder completion', 'SIMULATED_EVIDENCE_REQUIRED');\n    }\n  }\n  // Immutable originals (including whitespace) are never translated/rewritten.\n  return b;\n}\nfunction request(stage, method, path, body, key) {\n  return {stage, method, path, body, key, attempt: 1, retry: false, more: true, failed: false};\n}\nfunction prepare(input, kind, executionId, mode = 'fixture') {\n  assert(mode === 'fixture', 'LIVE_DISABLED_PENDING_PERSON_2_CONTRACT');\n  const context = {mode, execution_id: String(executionId), base_url: 'http://127.0.0.1:8094'};\n  if (kind === 'dispatch') return {...context, ...request('poll', 'GET', '/fixture/v1/automation/commands?state=pending', {}, 'poll:' + executionId)};\n  const envelope = normalizeEvent(input, kind);\n  return {...context, envelope, ...request('event', 'POST', '/fixture/v1/automation/events', envelope, envelope.event_id)};\n}\nfunction commandCheck(c, now) {\n  assert(c && stableId(c.command_id) && stableId(c.incident_id), 'INVALID_COMMAND');\n  assert(c.state === 'claimed' && ['dispatch', 'redispatch'].includes(c.action), 'UNAUTHORIZED_COMMAND');\n  assert(c.authorization && stableId(c.authorization.approval_id) && c.authorization.version === c.recommendation_version && typeof c.authorization.actor === 'string' && c.authorization.actor.length > 0, 'COMMITTED_APPROVAL_REQUIRED');\n  assert(Number.isInteger(c.recommendation_version) && c.recommendation_version > 0, 'INVALID_VERSION');\n  assert(stableId(c.claim_token) && Date.parse(c.lease_expires_at) > now + 1000, 'EXPIRED_CLAIM');\n  assert(Array.isArray(c.approved_resource_ids) && new Set(c.approved_resource_ids).size === c.approved_resource_ids.length, 'INVALID_APPROVED_SET');\n  assert(Array.isArray(c.new_assignments) && c.new_assignments.length > 0 && Array.isArray(c.continuing_assignment_ids) && Array.isArray(c.superseded_assignment_ids), 'INVALID_ASSIGNMENTS');\n  const ids = c.new_assignments.map(a => a.assignment_id), rids = c.new_assignments.map(a => a.resource_id);\n  assert(ids.every(stableId) && rids.every(stableId) && new Set(ids).size === ids.length && new Set(rids).size === rids.length, 'DUPLICATE_ASSIGNMENT');\n  assert(c.new_assignments.every(a => c.approved_resource_ids.includes(a.resource_id) && !c.continuing_assignment_ids.includes(a.assignment_id) && !c.superseded_assignment_ids.includes(a.assignment_id)), 'CONTINUING_OR_UNAPPROVED_RESOURCE');\n  return c;\n}\nfunction callback(c, outcome, delivery, error) {\n  return {event_id: c.command_id + ':result:' + c.claim_attempts + ':' + outcome,\n    claim_token: c.claim_token, outcome, occurred_at: new Date().toISOString(),\n    ...(outcome === 'accepted' ? {delivery_reference: delivery} : {error_code: error})};\n}\nfunction fail(ctx, code) {\n  const failure = {failure_id: ctx.execution_id + ':' + ctx.stage, stage: ctx.stage,\n    event_id: ctx.envelope?.event_id || null, command_id: ctx.command?.command_id || null,\n    attempts: ctx.attempt, error_code: code, simulated: true};\n  if (ctx.stage === 'failure_log') return {...ctx, retry: false, more: false, failed: true, failure: ctx.failure || failure};\n  if (ctx.stage === 'delivery' && ctx.command) {\n    const b = callback(ctx.command, 'failed', null, code);\n    return {...ctx, failure, ...request('failed_callback', 'POST', '/fixture/v1/automation/commands/' + ctx.command.command_id + '/result', b, b.event_id)};\n  }\n  const record = ctx.failure || failure;\n  return {...ctx, failure: record, ...request('failure_log', 'POST', '/fixture/failures', record, record.failure_id)};\n}\nfunction advance(ctx, response, now = Date.now()) {\n  assert(ctx.mode === 'fixture' && ctx.base_url === 'http://127.0.0.1:8094' && ctx.path.startsWith('/fixture/'), 'LIVE_DISABLED');\n  const status = Number(response.statusCode || 0);\n  let b = response.body;\n  if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = {}; } }\n  b = b || {};\n  const transient = status === 0 || status === 429 || status >= 500;\n  if (transient && ctx.attempt < 4) {\n    let delay = [1, 3, 10][ctx.attempt - 1];\n    const ra = response.headers?.['retry-after'];\n    if (ra) {\n      const parsed = /^\\d+$/.test(String(ra)) ? Number(ra) : Math.ceil((Date.parse(ra) - now) / 1000);\n      if (Number.isFinite(parsed)) delay = Math.max(delay, parsed);\n    }\n    if (delay > 30) return fail(ctx, 'RETRY_AFTER_REQUIRES_OPERATOR');\n    return {...ctx, attempt: ctx.attempt + 1, retry: true, delay_seconds: delay};\n  }\n  if (status < 200 || status >= 300) return fail(ctx, transient ? 'RETRY_EXHAUSTED' : (b.code || 'HTTP_' + status));\n  try {\n    assert(b.fixture === true, 'FIXTURE_RESPONSE_REQUIRED');\n    const next = (stage, path, body, key, method = 'POST') => ({...ctx, ...request(stage, method, path, body, key)});\n    if (ctx.stage === 'event') {\n      assert(b.accepted === true && b.event_id === ctx.envelope.event_id && stableId(b.incident_id), 'MISMATCHED_EVENT_ACK');\n      return {...ctx, more: false, retry: false, result: b};\n    }\n    if (ctx.stage === 'poll') {\n      assert(Array.isArray(b.command_ids) && b.command_ids.every(stableId), 'INVALID_COMMAND_LIST');\n      if (!b.command_ids.length) return {...ctx, more: false, retry: false, result: {status: ['awaiting_approval','awaiting_replacement'].includes(b.phase) ? 'WAIT_FOR_HUMAN' : 'NO_AUTHORIZED_COMMAND', phase: b.phase, fixture: true}};\n      const id = b.command_ids[0];\n      return {...next('claim', '/fixture/v1/automation/commands/' + id + '/claim', {worker_id: 'fixture-n8n'}, 'claim:' + ctx.execution_id + ':' + id), requested_command_id: id};\n    }\n    if (ctx.stage === 'claim') {\n      const c = commandCheck(b.command, now);\n      assert(c.command_id === ctx.requested_command_id, 'CLAIM_ID_MISMATCH');\n      return {...next('validate', '/fixture/v1/automation/commands/' + c.command_id + '/validate', {claim_token: c.claim_token}, c.command_id + ':validate:' + c.claim_attempts), command: c};\n    }\n    if (ctx.stage === 'validate') {\n      const c = commandCheck(b.command, now);\n      assert(b.valid === true && JSON.stringify(c) === JSON.stringify(ctx.command), 'REVALIDATION_MISMATCH');\n      const body = {command_id: c.command_id, claim_token: c.claim_token, incident_id: c.incident_id, recommendation_version: c.recommendation_version, new_assignments: c.new_assignments};\n      return next('delivery', '/fixture/receiver/deliver', body, c.command_id);\n    }\n    if (ctx.stage === 'delivery') {\n      assert(b.simulated === true && b.command_id === ctx.command.command_id && typeof b.delivery_reference === 'string', 'INVALID_DELIVERY_RECEIPT');\n      const body = callback(ctx.command, 'accepted', b.delivery_reference);\n      return next('callback', '/fixture/v1/automation/commands/' + ctx.command.command_id + '/result', body, body.event_id);\n    }\n    if (ctx.stage === 'callback') {\n      assert(b.accepted === true && b.command_id === ctx.command.command_id, 'MISMATCHED_CALLBACK');\n      return {...ctx, more: false, retry: false, result: {status: 'SIMULATED_DELIVERY_RECORDED', command_id: b.command_id, fixture: true}};\n    }\n    if (ctx.stage === 'failed_callback') return fail(ctx, ctx.failure.error_code);\n    if (ctx.stage === 'failure_log') return {...ctx, retry: false, more: false, failed: true};\n    throw new Error('UNKNOWN_STAGE');\n  } catch (e) { return fail(ctx, e.message); }\n}\n\n\nreturn [{json:prepare($json.body ?? $json, \"dispatch\", $execution.id)}];"
+      }
+    },
+    {
+      "id": "4746a5e6f4cc32d26609d2769de4beec",
+      "name": "Request context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return $input.all();"
+      }
+    },
+    {
+      "id": "2345dece150599995dfdfceaec40c4b9",
+      "name": "Fixture HTTP operation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        870,
+        0
+      ],
+      "parameters": {
+        "method": "={{ $json.method }}",
+        "url": "={{ $json.base_url + $json.path }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Fixture-Actor",
+              "value": "automation"
+            },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 5000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
+    },
+    {
+      "id": "7ca47b9aa7ff94ed10197ef8b4a6d720",
+      "name": "Check response and next stage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1090,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Shared pure logic embedded verbatim in exports and exercised by tests.\n// No filesystem, network, environment or credentials inside Code nodes.\nfunction assert(ok, code) { if (!ok) throw new Error(code); }\nfunction stableId(value) { return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(value); }\nfunction normalizeEvent(input, kind) {\n  const b = JSON.parse(JSON.stringify(input));\n  assert(b.schema_version === 1 && b.event_type === kind, 'INVALID_EVENT_TYPE');\n  assert(stableId(b.event_id) && stableId(b.correlation_id), 'STABLE_SOURCE_ID_REQUIRED');\n  assert(typeof b.source === 'string' && b.source.trim() === 'synthetic-demo', 'FIXTURE_SOURCE_REQUIRED');\n  b.source = b.source.trim();\n  assert(typeof b.occurred_at === 'string' && /(Z|[+-]\\d\\d:\\d\\d)$/.test(b.occurred_at) && Number.isFinite(Date.parse(b.occurred_at)), 'INVALID_TIMESTAMP');\n  b.occurred_at = new Date(b.occurred_at).toISOString();\n  const p = b.payload;\n  assert(p && typeof p === 'object' && !Array.isArray(p), 'INVALID_PAYLOAD');\n  if (kind === 'report_received') {\n    assert(!('incident_id' in b) && !('expected_version' in b), 'BACKEND_OWNS_INCIDENT');\n    assert(stableId(p.source_report_id) && p.channel === 'synthetic', 'INVALID_SOURCE_REPORT');\n    assert(typeof p.originalText === 'string' && p.originalText.trim().length > 0 && p.originalText.length <= 10000, 'INVALID_ORIGINAL_TEXT');\n    assert(['en','hi','kn','ta','te','ml','mr','bn','gu','pa','ur','as','or'].includes(p.originalLanguage), 'INVALID_ORIGINAL_LANGUAGE');\n    assert(typeof p.receivedAt === 'string' && /(Z|[+-]\\d\\d:\\d\\d)$/.test(p.receivedAt) && Number.isFinite(Date.parse(p.receivedAt)), 'INVALID_RECEIVED_AT');\n  } else {\n    assert(stableId(b.incident_id) && Number.isInteger(b.expected_version) && b.expected_version > 0, 'INCIDENT_VERSION_REQUIRED');\n    if (kind === 'road_obstruction') {\n      assert(stableId(p.assignment_id) && stableId(p.resource_id), 'ASSIGNMENT_REQUIRED');\n      assert(Number.isFinite(p.previous_eta_minutes) && p.previous_eta_minutes >= 0 && Number.isFinite(p.eta_minutes) && p.eta_minutes >= 0 && p.reason_code === 'road_blocked', 'INVALID_ETA');\n    } else {\n      assert(Array.isArray(p.assignment_ids) && p.assignment_ids.length > 0 && p.assignment_ids.every(stableId) && new Set(p.assignment_ids).size === p.assignment_ids.length, 'ASSIGNMENTS_REQUIRED');\n      assert(p.evidence === 'simulated responder completion', 'SIMULATED_EVIDENCE_REQUIRED');\n    }\n  }\n  // Immutable originals (including whitespace) are never translated/rewritten.\n  return b;\n}\nfunction request(stage, method, path, body, key) {\n  return {stage, method, path, body, key, attempt: 1, retry: false, more: true, failed: false};\n}\nfunction prepare(input, kind, executionId, mode = 'fixture') {\n  assert(mode === 'fixture', 'LIVE_DISABLED_PENDING_PERSON_2_CONTRACT');\n  const context = {mode, execution_id: String(executionId), base_url: 'http://127.0.0.1:8094'};\n  if (kind === 'dispatch') return {...context, ...request('poll', 'GET', '/fixture/v1/automation/commands?state=pending', {}, 'poll:' + executionId)};\n  const envelope = normalizeEvent(input, kind);\n  return {...context, envelope, ...request('event', 'POST', '/fixture/v1/automation/events', envelope, envelope.event_id)};\n}\nfunction commandCheck(c, now) {\n  assert(c && stableId(c.command_id) && stableId(c.incident_id), 'INVALID_COMMAND');\n  assert(c.state === 'claimed' && ['dispatch', 'redispatch'].includes(c.action), 'UNAUTHORIZED_COMMAND');\n  assert(c.authorization && stableId(c.authorization.approval_id) && c.authorization.version === c.recommendation_version && typeof c.authorization.actor === 'string' && c.authorization.actor.length > 0, 'COMMITTED_APPROVAL_REQUIRED');\n  assert(Number.isInteger(c.recommendation_version) && c.recommendation_version > 0, 'INVALID_VERSION');\n  assert(stableId(c.claim_token) && Date.parse(c.lease_expires_at) > now + 1000, 'EXPIRED_CLAIM');\n  assert(Array.isArray(c.approved_resource_ids) && new Set(c.approved_resource_ids).size === c.approved_resource_ids.length, 'INVALID_APPROVED_SET');\n  assert(Array.isArray(c.new_assignments) && c.new_assignments.length > 0 && Array.isArray(c.continuing_assignment_ids) && Array.isArray(c.superseded_assignment_ids), 'INVALID_ASSIGNMENTS');\n  const ids = c.new_assignments.map(a => a.assignment_id), rids = c.new_assignments.map(a => a.resource_id);\n  assert(ids.every(stableId) && rids.every(stableId) && new Set(ids).size === ids.length && new Set(rids).size === rids.length, 'DUPLICATE_ASSIGNMENT');\n  assert(c.new_assignments.every(a => c.approved_resource_ids.includes(a.resource_id) && !c.continuing_assignment_ids.includes(a.assignment_id) && !c.superseded_assignment_ids.includes(a.assignment_id)), 'CONTINUING_OR_UNAPPROVED_RESOURCE');\n  return c;\n}\nfunction callback(c, outcome, delivery, error) {\n  return {event_id: c.command_id + ':result:' + c.claim_attempts + ':' + outcome,\n    claim_token: c.claim_token, outcome, occurred_at: new Date().toISOString(),\n    ...(outcome === 'accepted' ? {delivery_reference: delivery} : {error_code: error})};\n}\nfunction fail(ctx, code) {\n  const failure = {failure_id: ctx.execution_id + ':' + ctx.stage, stage: ctx.stage,\n    event_id: ctx.envelope?.event_id || null, command_id: ctx.command?.command_id || null,\n    attempts: ctx.attempt, error_code: code, simulated: true};\n  if (ctx.stage === 'failure_log') return {...ctx, retry: false, more: false, failed: true, failure: ctx.failure || failure};\n  if (ctx.stage === 'delivery' && ctx.command) {\n    const b = callback(ctx.command, 'failed', null, code);\n    return {...ctx, failure, ...request('failed_callback', 'POST', '/fixture/v1/automation/commands/' + ctx.command.command_id + '/result', b, b.event_id)};\n  }\n  const record = ctx.failure || failure;\n  return {...ctx, failure: record, ...request('failure_log', 'POST', '/fixture/failures', record, record.failure_id)};\n}\nfunction advance(ctx, response, now = Date.now()) {\n  assert(ctx.mode === 'fixture' && ctx.base_url === 'http://127.0.0.1:8094' && ctx.path.startsWith('/fixture/'), 'LIVE_DISABLED');\n  const status = Number(response.statusCode || 0);\n  let b = response.body;\n  if (typeof b === 'string') { try { b = JSON.parse(b); } catch { b = {}; } }\n  b = b || {};\n  const transient = status === 0 || status === 429 || status >= 500;\n  if (transient && ctx.attempt < 4) {\n    let delay = [1, 3, 10][ctx.attempt - 1];\n    const ra = response.headers?.['retry-after'];\n    if (ra) {\n      const parsed = /^\\d+$/.test(String(ra)) ? Number(ra) : Math.ceil((Date.parse(ra) - now) / 1000);\n      if (Number.isFinite(parsed)) delay = Math.max(delay, parsed);\n    }\n    if (delay > 30) return fail(ctx, 'RETRY_AFTER_REQUIRES_OPERATOR');\n    return {...ctx, attempt: ctx.attempt + 1, retry: true, delay_seconds: delay};\n  }\n  if (status < 200 || status >= 300) return fail(ctx, transient ? 'RETRY_EXHAUSTED' : (b.code || 'HTTP_' + status));\n  try {\n    assert(b.fixture === true, 'FIXTURE_RESPONSE_REQUIRED');\n    const next = (stage, path, body, key, method = 'POST') => ({...ctx, ...request(stage, method, path, body, key)});\n    if (ctx.stage === 'event') {\n      assert(b.accepted === true && b.event_id === ctx.envelope.event_id && stableId(b.incident_id), 'MISMATCHED_EVENT_ACK');\n      return {...ctx, more: false, retry: false, result: b};\n    }\n    if (ctx.stage === 'poll') {\n      assert(Array.isArray(b.command_ids) && b.command_ids.every(stableId), 'INVALID_COMMAND_LIST');\n      if (!b.command_ids.length) return {...ctx, more: false, retry: false, result: {status: ['awaiting_approval','awaiting_replacement'].includes(b.phase) ? 'WAIT_FOR_HUMAN' : 'NO_AUTHORIZED_COMMAND', phase: b.phase, fixture: true}};\n      const id = b.command_ids[0];\n      return {...next('claim', '/fixture/v1/automation/commands/' + id + '/claim', {worker_id: 'fixture-n8n'}, 'claim:' + ctx.execution_id + ':' + id), requested_command_id: id};\n    }\n    if (ctx.stage === 'claim') {\n      const c = commandCheck(b.command, now);\n      assert(c.command_id === ctx.requested_command_id, 'CLAIM_ID_MISMATCH');\n      return {...next('validate', '/fixture/v1/automation/commands/' + c.command_id + '/validate', {claim_token: c.claim_token}, c.command_id + ':validate:' + c.claim_attempts), command: c};\n    }\n    if (ctx.stage === 'validate') {\n      const c = commandCheck(b.command, now);\n      assert(b.valid === true && JSON.stringify(c) === JSON.stringify(ctx.command), 'REVALIDATION_MISMATCH');\n      const body = {command_id: c.command_id, claim_token: c.claim_token, incident_id: c.incident_id, recommendation_version: c.recommendation_version, new_assignments: c.new_assignments};\n      return next('delivery', '/fixture/receiver/deliver', body, c.command_id);\n    }\n    if (ctx.stage === 'delivery') {\n      assert(b.simulated === true && b.command_id === ctx.command.command_id && typeof b.delivery_reference === 'string', 'INVALID_DELIVERY_RECEIPT');\n      const body = callback(ctx.command, 'accepted', b.delivery_reference);\n      return next('callback', '/fixture/v1/automation/commands/' + ctx.command.command_id + '/result', body, body.event_id);\n    }\n    if (ctx.stage === 'callback') {\n      assert(b.accepted === true && b.command_id === ctx.command.command_id, 'MISMATCHED_CALLBACK');\n      return {...ctx, more: false, retry: false, result: {status: 'SIMULATED_DELIVERY_RECORDED', command_id: b.command_id, fixture: true}};\n    }\n    if (ctx.stage === 'failed_callback') return fail(ctx, ctx.failure.error_code);\n    if (ctx.stage === 'failure_log') return {...ctx, retry: false, more: false, failed: true};\n    throw new Error('UNKNOWN_STAGE');\n  } catch (e) { return fail(ctx, e.message); }\n}\n\n\nreturn [{json:advance($('Request context').item.json, $json)}];"
+      }
+    },
+    {
+      "id": "06e17218e309f8fe4e420a6b4cbb7f33",
+      "name": "Retry transient only",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "retry",
+              "leftValue": "={{ $json.retry }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f12ac302d590231e6a82c490ce4a67e2",
+      "name": "Bounded retry delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        -230
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $json.delay_seconds }}",
+        "unit": "seconds"
+      },
+      "webhookId": "reliefmesh-fixture-wait-dispatch"
+    },
+    {
+      "id": "139eaef87fd4e6e9a28859ec90440c0a",
+      "name": "Next authorized step",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1550,
+        100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "more",
+              "leftValue": "={{ $json.more }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6f875d89185ce7a148d20661050f2a8e",
+      "name": "Failed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1770,
+        170
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "failed",
+              "leftValue": "={{ $json.failed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "1964ea8e243d398b587c54fb28439ae2",
+      "name": "Explicit failure",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1990,
+        50
+      ],
+      "parameters": {
+        "errorMessage": "={{ JSON.stringify($json.failure) }}"
+      }
+    },
+    {
+      "id": "129a01f7319b8d867eeae4d655b5a038",
+      "name": "Result or WAIT FOR HUMAN",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1990,
+        280
+      ],
+      "parameters": {
+        "jsCode": "return [{json:$json.result || {status:'FAILED', failure:$json.failure}}];"
+      }
+    },
+    {
+      "id": "f69577b9ee117a49aba6ab42cc9401fd",
+      "name": "Read me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        380
+      ],
+      "parameters": {
+        "content": "# FIXTURE ONLY — live disabled\nOne poll → claim → validate lease/version → SIMULATED delivery → result.\nNo command: WAIT FOR HUMAN, then stop. Run again AFTER a separate coordinator approval. Same graph handles gate #2. Continuing responders are excluded.\n\nHTTP steps: max 4 attempts, waits 1/3/10s; 4xx stop (except 429). Failure is saved in execution data. Nothing contacts a real responder.",
+        "height": 280,
+        "width": 560
+      }
+    }
+  ],
+  "connections": {
+    "Manual trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate and lock fixture mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and lock fixture mode": {
+      "main": [
+        [
+          {
+            "node": "Request context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request context": {
+      "main": [
+        [
+          {
+            "node": "Fixture HTTP operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fixture HTTP operation": {
+      "main": [
+        [
+          {
+            "node": "Check response and next stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check response and next stage": {
+      "main": [
+        [
+          {
+            "node": "Retry transient only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry transient only": {
+      "main": [
+        [
+          {
+            "node": "Bounded retry delay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Next authorized step",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bounded retry delay": {
+      "main": [
+        [
+          {
+            "node": "Request context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next authorized step": {
+      "main": [
+        [
+          {
+            "node": "Request context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Failed": {
+      "main": [
+        [
+          {
+            "node": "Explicit failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Result or WAIT FOR HUMAN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 600
+  },
+  "pinData": {},
+  "versionId": "c2af8491-d259-9d5d-c088-93247c3f6b90",
+  "tags": []
+}

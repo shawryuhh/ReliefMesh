@@ -206,5 +206,13 @@
   "route.disruption": "റോഡ് തടസ്സം",
   "route.replanning": "പുനരാസൂത്രണം",
   "decision.replacementApproved": "പകരം പദ്ധതി അംഗീകരിച്ചു",
-  "map.assignmentLines": "വരകൾ നിയോഗങ്ങൾ കാണിക്കുന്നു, റോഡ് വഴികളല്ല"
+  "map.assignmentLines": "വരകൾ നിയോഗങ്ങൾ കാണിക്കുന്നു, റോഡ് വഴികളല്ല",
+  "queue.active": "സജീവ സംഭവങ്ങൾ",
+  "queue.history": "പരിഹരിച്ചവ / ചരിത്രം",
+  "queue.emptyActive": "ശ്രദ്ധ ആവശ്യമുള്ള സജീവ സംഭവങ്ങളില്ല",
+  "history.readOnly": "ചരിത്രം · വായിക്കാൻ മാത്രം",
+  "resolution.complete": "പ്രതികരണം പൂർത്തിയായി",
+  "resolution.people": "റിപ്പോർട്ടിലെ ആളുകൾ",
+  "resolution.next": "ഉടൻ സജീവ പട്ടികയിലേക്ക് മടങ്ങും",
+  "demo.runAgain": "ഡെമോ വീണ്ടും പ്രവർത്തിപ്പിക്കുക"
 }

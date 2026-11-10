@@ -206,5 +206,13 @@
   "route.disruption": "રસ્તો અવરોધિત",
   "route.replanning": "પુનઃ આયોજન",
   "decision.replacementApproved": "વૈકલ્પિક યોજના મંજૂર",
-  "map.assignmentLines": "તૂટક રેખાઓ ફાળવણી દર્શાવે છે, રસ્તાના માર્ગો નહીં"
+  "map.assignmentLines": "તૂટક રેખાઓ ફાળવણી દર્શાવે છે, રસ્તાના માર્ગો નહીં",
+  "queue.active": "સક્રિય ઘટનાઓ",
+  "queue.history": "ઉકેલ / ઇતિહાસ",
+  "queue.emptyActive": "ધ્યાન આપવાની જરૂર હોય તેવી કોઈ સક્રિય ઘટના નથી",
+  "history.readOnly": "ઇતિહાસ · ફક્ત વાંચવા માટે",
+  "resolution.complete": "પ્રતિસાદ પૂર્ણ",
+  "resolution.people": "અહેવાલમાં લોકો",
+  "resolution.next": "ટૂંક સમયમાં સક્રિય યાદીમાં પાછા ફરશે",
+  "demo.runAgain": "ડેમો ફરી ચલાવો"
 }

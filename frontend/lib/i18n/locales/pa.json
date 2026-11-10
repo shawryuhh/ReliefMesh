@@ -206,5 +206,13 @@
   "route.disruption": "ਸੜਕ ਬੰਦ",
   "route.replanning": "ਮੁੜ ਯੋਜਨਾ",
   "decision.replacementApproved": "ਬਦਲਵੀਂ ਯੋਜਨਾ ਮਨਜ਼ੂਰ",
-  "map.assignmentLines": "ਟੁੱਟੀਆਂ ਲਾਈਨਾਂ ਤਾਇਨਾਤੀ ਦਿਖਾਉਂਦੀਆਂ ਹਨ, ਸੜਕ ਦੇ ਰਸਤੇ ਨਹੀਂ"
+  "map.assignmentLines": "ਟੁੱਟੀਆਂ ਲਾਈਨਾਂ ਤਾਇਨਾਤੀ ਦਿਖਾਉਂਦੀਆਂ ਹਨ, ਸੜਕ ਦੇ ਰਸਤੇ ਨਹੀਂ",
+  "queue.active": "ਸਰਗਰਮ ਘਟਨਾਵਾਂ",
+  "queue.history": "ਹੱਲ / ਇਤਿਹਾਸ",
+  "queue.emptyActive": "ਧਿਆਨ ਦੀ ਲੋੜ ਵਾਲੀ ਕੋਈ ਸਰਗਰਮ ਘਟਨਾ ਨਹੀਂ",
+  "history.readOnly": "ਇਤਿਹਾਸ · ਸਿਰਫ਼ ਪੜ੍ਹਨ ਲਈ",
+  "resolution.complete": "ਕਾਰਵਾਈ ਪੂਰੀ ਹੋਈ",
+  "resolution.people": "ਰਿਪੋਰਟ ਵਿੱਚ ਲੋਕ",
+  "resolution.next": "ਜਲਦੀ ਸਰਗਰਮ ਸੂਚੀ ਵਿੱਚ ਵਾਪਸ ਜਾਵੇਗਾ",
+  "demo.runAgain": "ਡੈਮੋ ਦੁਬਾਰਾ ਚਲਾਓ"
 }

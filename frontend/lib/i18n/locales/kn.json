@@ -206,5 +206,13 @@
   "route.disruption": "ರಸ್ತೆ ತಡೆ",
   "route.replanning": "ಮರುಯೋಜನೆ",
   "decision.replacementApproved": "ಬದಲಿ ಯೋಜನೆ ಅನುಮೋದಿಸಲಾಗಿದೆ",
-  "map.assignmentLines": "ತುಂಡು ರೇಖೆಗಳು ನಿಯೋಜನೆಗಳನ್ನು ತೋರಿಸುತ್ತವೆ, ರಸ್ತೆ ಮಾರ್ಗಗಳನ್ನಲ್ಲ"
+  "map.assignmentLines": "ತುಂಡು ರೇಖೆಗಳು ನಿಯೋಜನೆಗಳನ್ನು ತೋರಿಸುತ್ತವೆ, ರಸ್ತೆ ಮಾರ್ಗಗಳನ್ನಲ್ಲ",
+  "queue.active": "ಸಕ್ರಿಯ ಘಟನೆಗಳು",
+  "queue.history": "ಪರಿಹರಿಸಿದ / ಇತಿಹಾಸ",
+  "queue.emptyActive": "ಗಮನ ಅಗತ್ಯವಿರುವ ಸಕ್ರಿಯ ಘಟನೆಗಳಿಲ್ಲ",
+  "history.readOnly": "ಇತಿಹಾಸ · ಓದಲು ಮಾತ್ರ",
+  "resolution.complete": "ಪ್ರತಿಕ್ರಿಯೆ ಪೂರ್ಣಗೊಂಡಿದೆ",
+  "resolution.people": "ವರದಿಯಲ್ಲಿರುವ ಜನರು",
+  "resolution.next": "ಶೀಘ್ರದಲ್ಲೇ ಸಕ್ರಿಯ ಘಟನೆಗಳ ಪಟ್ಟಿಗೆ ಹಿಂತಿರುಗುತ್ತದೆ",
+  "demo.runAgain": "ಡೆಮೋ ಮತ್ತೆ ಚಲಾಯಿಸಿ"
 }

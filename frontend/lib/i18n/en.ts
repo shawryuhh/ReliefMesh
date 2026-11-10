@@ -51,5 +51,13 @@ export const en = {
   "route.replanning": "Replanning response\u2026",
   "decision.replacementApproved": "Replacement approved",
   "map.assignmentLines": "Dashed lines show assignments, not road routes",
+  "queue.active": "Active incidents",
+  "queue.history": "Resolved / History",
+  "queue.emptyActive": "No active incidents requiring attention",
+  "history.readOnly": "History \u00b7 read-only",
+  "resolution.complete": "Response complete",
+  "resolution.people": "People in report",
+  "resolution.next": "Returning to the active queue shortly",
+  "demo.runAgain": "Run demo again",
 } as const;
 export type TranslationKey = keyof typeof en;

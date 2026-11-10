@@ -118,6 +118,7 @@ export function createMockService(): ReliefService & DemoService {
       if (demoSteps[state.demoIndex] !== step) throw new ServiceError("error.order");
       let incident = state.incidents.find(i => i.id === "INC-1042");
       if (step === "receive") {
+        if (incident) throw new ServiceError("error.order"); // Canonical ID must be unique, even if a caller repeats intake.
         incident = canonicalIncident(now()); incident.status = "analyzing"; incident.priority = 0; incident.duplicates = 0;
         state.incidents.push(incident); addEvent("incident_received", incident.id, {}, "intake");
       }

@@ -206,5 +206,13 @@
   "route.disruption": "रस्ता अडथळा",
   "route.replanning": "पुनर्नियोजन",
   "decision.replacementApproved": "पर्यायी योजना मंजूर",
-  "map.assignmentLines": "तुटक रेषा नेमणुका दाखवतात, रस्त्याचे मार्ग नाहीत"
+  "map.assignmentLines": "तुटक रेषा नेमणुका दाखवतात, रस्त्याचे मार्ग नाहीत",
+  "queue.active": "सक्रिय घटना",
+  "queue.history": "निराकरण / इतिहास",
+  "queue.emptyActive": "लक्ष देण्याची गरज असलेली सक्रिय घटना नाही",
+  "history.readOnly": "इतिहास · फक्त वाचनासाठी",
+  "resolution.complete": "प्रतिसाद पूर्ण झाला",
+  "resolution.people": "अहवालातील लोक",
+  "resolution.next": "लवकरच सक्रिय यादीकडे परत जाईल",
+  "demo.runAgain": "डेमो पुन्हा चालवा"
 }

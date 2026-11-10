@@ -206,5 +206,13 @@
   "route.disruption": "రోడ్డు అడ్డంకి",
   "route.replanning": "పునః ప్రణాళిక",
   "decision.replacementApproved": "ప్రత్యామ్నాయ ప్రణాళిక ఆమోదించబడింది",
-  "map.assignmentLines": "గీతలు కేటాయింపులను చూపుతాయి, రహదారి మార్గాలను కాదు"
+  "map.assignmentLines": "గీతలు కేటాయింపులను చూపుతాయి, రహదారి మార్గాలను కాదు",
+  "queue.active": "క్రియాశీల ఘటనలు",
+  "queue.history": "పరిష్కరించినవి / చరిత్ర",
+  "queue.emptyActive": "శ్రద్ధ అవసరమైన క్రియాశీల ఘటనలు లేవు",
+  "history.readOnly": "చరిత్ర · చదవడానికి మాత్రమే",
+  "resolution.complete": "స్పందన పూర్తయింది",
+  "resolution.people": "నివేదికలోని వ్యక్తులు",
+  "resolution.next": "త్వరలో క్రియాశీల జాబితాకు తిరిగి వెళ్తుంది",
+  "demo.runAgain": "డెమో మళ్లీ నడపండి"
 }
