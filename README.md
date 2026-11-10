@@ -86,10 +86,10 @@ flowchart LR
 
 **Requirements:** Node.js 22.18+, Python 3.12, and PostgreSQL 16 for the backend-backed demo.
 
-Clone the verified development branch:
+Clone the portfolio release from the default `main` branch:
 
 ```powershell
-git clone --branch integration https://github.com/shawryuhh/ReliefMesh.git
+git clone https://github.com/shawryuhh/ReliefMesh.git
 cd ReliefMesh
 ```
 
@@ -111,7 +111,7 @@ For backend, AI, and n8n testing, consult the component READMEs and the workflow
 
 ## Verification
 
-The latest reviewed integration commit, `9f260b3`, passed GitHub Actions frontend checks, backend PostgreSQL checks, and the local integration smoke test. The AI/automation workflow passed on the preceding integrated baseline. These checks validate development behavior; they are not production certification.
+The portfolio release was verified before merging to `main`: 55/55 frontend tests passed, TypeScript checks and the Next.js production build passed, backend PostgreSQL checks passed, AI and fixture-only n8n tests passed, and the PostgreSQL + FastAPI + Next.js integration smoke test passed. The complete simulated demo was also manually verified on Windows. These checks validate the hackathon/portfolio demonstration; they are not production certification.
 
 [View CI runs](https://github.com/shawryuhh/ReliefMesh/actions)
 
