@@ -47,6 +47,7 @@ from app.schemas.recommendation import (
 )
 from app.services import id_generator
 from app.services.action_log_service import record_action
+from app.services.operational_revision import bump_operational_revision
 from app.services.assignment_service import (
     LIVE_ASSIGNMENT_STATUSES,
     TERMINAL_INCIDENT_STATUSES,
@@ -228,6 +229,8 @@ def create_recommendation(
         )
         record_action(db, source="ai", action="approval_requested", incident_id=incident.id, metadata=metadata)
 
+        bump_operational_revision(db)
+
         db.commit()
         db.refresh(recommendation)
         return to_response(recommendation), True
@@ -334,6 +337,8 @@ def propose_replacement(
             },
         )
         record_action(db, source="ai", action="approval_requested", incident_id=incident.id, metadata=metadata)
+
+        bump_operational_revision(db)
 
         db.commit()
         db.refresh(recommendation)
@@ -513,6 +518,8 @@ def approve_recommendation(
         recommendation.decided_by = approved_by
         recommendation.decided_at = func.now()
         incident.operational_phase = OperationalPhase.DISPATCHED
+
+        bump_operational_revision(db)
 
         db.commit()
         db.refresh(recommendation)
