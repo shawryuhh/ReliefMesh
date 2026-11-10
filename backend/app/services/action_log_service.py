@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError, ValidationFailedError
 from app.models.action_log import ActionLog
+from app.services.operational_revision import bump_operational_revision
 from app.schemas.action_log import ActionLogCreate, ActionLogResponse
 
 
@@ -78,6 +79,7 @@ def create_manual_entry(db: Session, payload: ActionLogCreate) -> ActionLogRespo
             assignment_id=payload.assignment_id,
             metadata=payload.metadata,
         )
+        bump_operational_revision(db)
         db.commit()
         db.refresh(log)
         return to_response(log)
