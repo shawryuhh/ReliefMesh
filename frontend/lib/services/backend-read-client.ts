@@ -1,4 +1,5 @@
 import "server-only";
+import { collectPages, PaginationError } from "./pagination";
 
 // Internal read-only backend client. Never import this module in client components.
 export class BackendReadError extends Error {
@@ -44,21 +45,14 @@ const MAX_PAGES = 5;
 
 /** Fetch bounded pages; never present a truncated list as complete. */
 async function paged(origin: string, endpoint: "incidents" | "resources" | "assignments"): Promise<unknown[]> {
-  const all: unknown[] = [];
-  const ids = new Set<string>();
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const result = await getJson(origin, "/" + endpoint + "?limit=" + PAGE_SIZE + "&offset=" + (page * PAGE_SIZE));
-    if (!Array.isArray(result)) throw new BackendReadError("invalid_response");
-    for (const item of result) {
-      if (!item || typeof item !== "object" || Array.isArray(item) ||
-          typeof item.id !== "string" || !item.id || ids.has(item.id))
-        throw new BackendReadError("invalid_response");
-      ids.add(item.id);
-      all.push(item);
-    }
-    if (result.length < PAGE_SIZE) return all;
+  try {
+    return await collectPages(async (limit, offset) =>
+      getJson(origin, "/" + endpoint + "?limit=" + limit + "&offset=" + offset),
+      PAGE_SIZE, MAX_PAGES);
+  } catch (error) {
+    if (error instanceof PaginationError) throw new BackendReadError("invalid_response");
+    throw error;
   }
-  throw new BackendReadError("invalid_response");
 }
 export async function fetchBackendCollections(): Promise<{ incidents: unknown[]; resources: unknown[] }> {
   const origin = configuredOrigin();
