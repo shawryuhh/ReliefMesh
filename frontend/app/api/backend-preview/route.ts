@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { previewAllowed } from "../../../lib/services/preview-access";
-import { fetchBackendCollections, fetchBackendAssignments, fetchBackendRecommendation, BackendReadError } from "../../../lib/services/backend-read-client";
+import { BackendReadError } from "../../../lib/services/backend-read-client";
+import { fetchSnapshotPreview } from "../../../lib/services/snapshot-read-client";
 
 // Read-only integration preview. This endpoint does not replace the mock
 // ReliefService or expose privileged coordinator credentials to the browser.
@@ -65,21 +66,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "preview_disabled" }, { status: 404 });
   }
   try {
-    const [{ incidents: rawIncidents, resources: rawResources }, rawAssignments] = await Promise.all([
-      fetchBackendCollections(), fetchBackendAssignments(),
-    ]);
-    if (!Array.isArray(rawIncidents) || !rawIncidents.every(incident) ||
-        !Array.isArray(rawResources) || !rawResources.every(resource) ||
-        !Array.isArray(rawAssignments) || !rawAssignments.every(assignment)) {
+    const snapshot = await fetchSnapshotPreview();
+    const rawIncidents = snapshot.incidents;
+    const rawResources = snapshot.resources;
+    const rawAssignments = snapshot.assignments;
+    const recommendations = snapshot.recommendations;
+    if (!rawIncidents.every(incident) || !rawResources.every(resource) ||
+        !rawAssignments.every(assignment) || !recommendations.every(recommendation)) {
       return NextResponse.json({ error: "contract_mismatch" }, { status: 502 });
     }
-    const pendingIds = rawIncidents.map(i => i.id);
-    const recommendations = await Promise.all(pendingIds.map(async id => fetchBackendRecommendation(id)));
-    if (!recommendations.every(r => r === null || recommendation(r)))
-      return NextResponse.json({ error: "contract_mismatch" }, { status: 502 });
     // Explicitly return a limited projection; no raw reports, keys, or audit data.
     return NextResponse.json({
       mode: "read_only_preview",
+      generated_at: snapshot.generated_at,
+      revision: snapshot.revision,
       incidents: rawIncidents.map(i => ({
         id: i.id, location: i.location, type: i.type, severity: i.severity,
         status: i.status, operational_phase: i.operational_phase,
