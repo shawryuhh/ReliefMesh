@@ -2,6 +2,7 @@ import { BackendPreview } from "./preview";
 import { headers } from "next/headers";
 
 export default async function IntegrationPreviewPage() {
+  if (process.env.NODE_ENV !== "development") return <main style={{padding:32}}><h1>Development preview only</h1></main>;
   const h = await headers();
   const host = h.get("host")?.split(":")[0]?.toLowerCase();
   if (h.get("x-forwarded-host") || !["localhost","127.0.0.1","[::1]"].includes(host ?? ""))
