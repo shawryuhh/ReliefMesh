@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { decideRevision } from "../../lib/services/revision-guard";
 import { refreshFailed, refreshSucceeded } from "../../lib/services/refresh-state";
+import { classifyPreviewStatus, previewStatusMessage } from "../../lib/services/preview-connection-status";
 type Incident = { id:string; location:string; type:string; severity:string; status:string; operational_phase:string; priority_score:number|null; people_affected:number|null };
 type Resource = { id:string; location:string; type:string; status:string; capacity:number|null };
 type Assignment = {id:string;incident_id:string;resource_id:string;status:string;assigned_at:string};
@@ -22,7 +23,11 @@ export function BackendPreview() {
   useEffect(()=>{
     const controller = new AbortController();
     fetch("/api/backend-preview", {cache:"no-store",signal:controller.signal})
-      .then(async r=>{if(!r.ok) throw new Error("Backend unavailable or preview disabled"); return r.json() as Promise<unknown>;})
+      .then(async r=>{if(!r.ok) {
+        const body: unknown = await r.json().catch(()=>null);
+        const code = body && typeof body === "object" && "error" in body && typeof body.error === "string" ? body.error : null;
+        throw new Error(previewStatusMessage(classifyPreviewStatus(r.status,code)));
+      } return r.json() as Promise<unknown>;})
       .then(v=>{if(!isPreview(v)) throw new Error("Unexpected preview response");
         const decision = decideRevision(latestRevision.current,v.revision);
         if (decision !== "accept") throw new Error(decision === "stale" ? "Stale backend snapshot rejected" : "Invalid backend revision");
