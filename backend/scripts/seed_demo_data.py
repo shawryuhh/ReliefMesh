@@ -37,6 +37,7 @@ from app.schemas.recommendation import (
 from app.schemas.resource import ResourceCreate
 from app.services import disruption_service, incident_service, recommendation_service, resource_service
 from app.services.id_generator import resource_prefix_for_type
+from app.services.operational_revision import bump_operational_revision
 
 APP_TABLES = ["incidents", "resources", "assignments", "action_logs", "reports", "recommendations"]
 
@@ -82,6 +83,7 @@ def reset_tables(db: Session) -> None:
     # explicitly by seed_narrative_scenario anyway.
     for seq_name in ("report_seq", "recommendation_seq"):
         db.execute(text(f"SELECT setval('{seq_name}', 1, false)"))
+    bump_operational_revision(db)
     db.commit()
 
 
