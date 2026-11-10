@@ -6,6 +6,7 @@ from app.models.assignment import Assignment
 from app.models.enums import AssignmentStatus, IncidentStatus
 from app.models.incident import Incident
 from app.services import id_generator
+from app.services.operational_revision import bump_operational_revision
 from app.services.action_log_service import record_action
 from app.services.state_machine import ALLOWED_INCIDENT_TRANSITIONS, assert_transition_allowed
 from app.schemas.assignment import AssignmentResponse
@@ -62,6 +63,7 @@ def create_incident(db: Session, payload: IncidentCreate) -> IncidentResponse:
             metadata=payload.report_metadata,
         )
 
+        bump_operational_revision(db)
         db.commit()
         db.refresh(incident)
         return to_response(db, incident)
@@ -115,6 +117,7 @@ def update_incident(db: Session, incident_id: str, payload: IncidentUpdate) -> I
             incident_id=incident.id,
             metadata={"updated_fields": list(updates.keys())},
         )
+        bump_operational_revision(db)
         db.commit()
         db.refresh(incident)
         return to_response(db, incident)
@@ -139,6 +142,7 @@ def resolve_incident(db: Session, incident_id: str, reason: str | None) -> Incid
             reason=reason,
             incident_id=incident.id,
         )
+        bump_operational_revision(db)
         db.commit()
         db.refresh(incident)
         return to_response(db, incident)
@@ -163,6 +167,7 @@ def cancel_incident(db: Session, incident_id: str, reason: str | None) -> Incide
             reason=reason,
             incident_id=incident.id,
         )
+        bump_operational_revision(db)
         db.commit()
         db.refresh(incident)
         return to_response(db, incident)
