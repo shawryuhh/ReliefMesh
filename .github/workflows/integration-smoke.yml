@@ -93,6 +93,22 @@ jobs:
                   except Exception:
                       if attempt == 59: raise
                       time.sleep(2)
+          # Create a synthetic incident using the authenticated backend API,
+          # then verify the frontend returns the same ID and a newer revision.
+          import urllib.request
+          payload = json.dumps({"location":"CI synthetic location","type":"flood","severity":"HIGH"}).encode()
+          request = urllib.request.Request(
+              'http://127.0.0.1:8000/incidents',
+              data=payload,
+              headers={'Content-Type':'application/json','X-API-Key':'ci-integration-test-only'},
+              method='POST',
+          )
+          with urllib.request.urlopen(request,timeout=5) as response:
+              assert response.status == 201
+              incident = json.load(response)
+          _, snapshot = get('http://127.0.0.1:3000/api/backend-preview')
+          assert any(i['id'] == incident['id'] for i in snapshot['incidents'])
+          assert snapshot['revision'] >= 1
           # The backend snapshot requires a key, even in CI.
           try:
               get('http://127.0.0.1:8000/integration/v1/snapshot-preview')
