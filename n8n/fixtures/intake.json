@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "event_id": "demo-run-01-report-01",
+  "event_type": "report_received",
+  "occurred_at": "2026-09-20T10:00:00Z",
+  "source": "synthetic-demo",
+  "correlation_id": "demo-run-01",
+  "payload": {
+    "source_report_id": "synthetic-report-01",
+    "channel": "synthetic",
+    "originalText": "Water entering Krishna Apartments Block C. My grandmother cannot walk.",
+    "originalLanguage": "en",
+    "receivedAt": "2026-09-20T10:00:00Z"
+  }
+}
