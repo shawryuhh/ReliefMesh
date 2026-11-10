@@ -210,6 +210,12 @@ def test_modify_and_reject_recommendation_enforces_rules_and_auth(client, monkey
             headers={"X-API-Key": "auto-test-key"},
         )
         assert auto_rej.status_code == 403
+        auto_step_approve = client.post(
+            "/integration/v1/demo/step",
+            json={"step": "approve"},
+            headers={"X-API-Key": "auto-test-key"},
+        )
+        assert auto_step_approve.status_code == 403
     finally:
         app.dependency_overrides.pop(get_settings, None)
 

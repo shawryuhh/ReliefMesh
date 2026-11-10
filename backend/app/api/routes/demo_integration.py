@@ -80,7 +80,7 @@ def _resolve_actor(
         return "automation"
     if not settings.auth_enabled:
         return "coordinator"
-    expected_coord = settings.effective_coordinator_key
+    expected_coord = settings.coordinator_api_key or settings.api_key
     if expected_coord and x_api_key and secrets.compare_digest(x_api_key, expected_coord):
         return "coordinator"
     return "automation"
