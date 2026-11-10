@@ -54,3 +54,14 @@ def test_snapshot_returns_complete_read_only_collections(client, monkeypatch):
                        headers={"X-API-Key": "snapshot-test-only-key"})
     assert again.status_code == 200
     assert len(again.json()["incidents"]) == len(body["incidents"])
+
+
+def test_snapshot_rejects_production_environment(client, monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "auth_enabled", True)
+    monkeypatch.setattr(settings, "api_key", "snapshot-test-only-key")
+    response = client.get("/integration/v1/snapshot-preview",
+                          headers={"X-API-Key": "snapshot-test-only-key"})
+    assert response.status_code == 503
+    assert "incidents" not in response.text
