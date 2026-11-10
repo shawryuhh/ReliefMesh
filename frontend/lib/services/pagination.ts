@@ -1,7 +1,9 @@
 export type PageRecord = { id: string };
 export class PaginationError extends Error {
-  constructor(public readonly code: "invalid_page" | "page_limit") {
+  readonly code: "invalid_page" | "page_limit";
+  constructor(code: "invalid_page" | "page_limit") {
     super(code);
+    this.code = code;
     this.name = "PaginationError";
   }
 }
