@@ -2,9 +2,9 @@ name: ReliefMesh frontend checks
 
 on:
   push:
-    branches: [integration]
+    branches: [main, integration]
   pull_request:
-    branches: [integration]
+    branches: [main, integration]
   workflow_dispatch:
 
 permissions:
