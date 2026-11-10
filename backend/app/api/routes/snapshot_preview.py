@@ -26,7 +26,7 @@ def snapshot_preview(db: Session = Depends(get_db)):
     settings = get_settings()
     # This route contains original report text. Never expose it with the
     # application's development-default disabled authentication.
-    if not settings.auth_enabled or not settings.api_key:
+    if settings.app_env not in ("local", "test") or not settings.auth_enabled or not settings.api_key:
         raise HTTPException(status_code=503, detail="Authenticated snapshot preview unavailable")
 
     # SET TRANSACTION must precede the first query in this session.
