@@ -52,6 +52,7 @@ from app.models.resource import Resource
 from app.schemas.assignment import AssignmentCreate, AssignmentResponse, AssignmentStatusUpdate
 from app.services import id_generator
 from app.services.action_log_service import record_action
+from app.services.operational_revision import bump_operational_revision
 from app.services.state_machine import (
     ALLOWED_ASSIGNMENT_TRANSITIONS,
     ALLOWED_RESOURCE_TRANSITIONS,
@@ -230,6 +231,8 @@ def create_assignment(db: Session, payload: AssignmentCreate) -> list[Assignment
                 metadata={"approved_by": recommendation.decided_by, "recommendation_id": recommendation.id},
             )
 
+        bump_operational_revision(db)
+
         db.commit()
         result_assignments = [*existing_live_by_resource.values(), *created]
         for assignment in result_assignments:
@@ -321,6 +324,7 @@ def update_assignment_status(
             assignment_id=assignment.id,
             metadata={"new_status": payload.status.value},
         )
+        bump_operational_revision(db)
         db.commit()
         db.refresh(assignment)
         return to_response(assignment)
