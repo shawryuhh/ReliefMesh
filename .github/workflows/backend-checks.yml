@@ -2,12 +2,12 @@ name: ReliefMesh backend PostgreSQL checks
 
 on:
   push:
-    branches: [integration]
+    branches: [main, integration]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-checks.yml'
   pull_request:
-    branches: [integration]
+    branches: [main, integration]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-checks.yml'
