@@ -3,7 +3,7 @@ import test from "node:test";
 import { isSnapshotEnvelope } from "../lib/services/snapshot-contract.ts";
 
 const valid = () => ({
-  schema_version: 1, revision: null, complete: true,
+  schema_version: 1, revision: 0, complete: true,
   generated_at: "2026-11-10T12:00:00Z",
   incidents: [], resources: [], assignments: [],
   recommendations: [], reports: [], activity: [],
