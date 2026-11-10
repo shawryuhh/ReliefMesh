@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { decideRevision } from "../../lib/services/revision-guard";
+import { refreshFailed, refreshSucceeded } from "../../lib/services/refresh-state";
 type Incident = { id:string; location:string; type:string; severity:string; status:string; operational_phase:string; priority_score:number|null; people_affected:number|null };
 type Resource = { id:string; location:string; type:string; status:string; capacity:number|null };
 type Assignment = {id:string;incident_id:string;resource_id:string;status:string;assigned_at:string};
@@ -26,8 +27,8 @@ export function BackendPreview() {
         const decision = decideRevision(latestRevision.current,v.revision);
         if (decision !== "accept") throw new Error(decision === "stale" ? "Stale backend snapshot rejected" : "Invalid backend revision");
         latestRevision.current = v.revision;
-        setData(v);setError(null);setStale(false);})
-      .catch(e=>{if(!controller.signal.aborted){setError(e instanceof Error?e.message:"Preview failed");setStale(true);}})
+        setData(v);setError(null);setStale(refreshSucceeded().state === "stale");})
+      .catch(e=>{if(!controller.signal.aborted){setError(e instanceof Error?e.message:"Preview failed");setStale(refreshFailed(latestRevision.current !== null).state === "stale");}})
       .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return ()=>controller.abort();
   },[refresh]);
