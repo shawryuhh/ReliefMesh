@@ -1,0 +1,108 @@
+name: ReliefMesh local integration smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [integration]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/integration-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: reliefmesh
+          POSTGRES_PASSWORD: reliefmesh
+          POSTGRES_DB: reliefmesh_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U reliefmesh -d reliefmesh_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg2://reliefmesh:reliefmesh@localhost:5432/reliefmesh_test
+      APP_ENV: test
+      AUTH_ENABLED: 'true'
+      API_KEY: ci-integration-test-only
+      CORS_ORIGINS: http://localhost:3000
+      RELIEFMESH_BACKEND_URL: http://localhost:8000
+      RELIEFMESH_BACKEND_READ_KEY: ci-integration-test-only
+      RELIEFMESH_ENABLE_READ_PREVIEW: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: |
+          python -m pip install -r backend/requirements.txt
+          npm ci --prefix frontend
+      - name: Migrate isolated database
+        working-directory: backend
+        run: python -m alembic upgrade head
+      - name: Start backend
+        working-directory: backend
+        run: |
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/reliefmesh-backend.log 2>&1 &
+          echo $! > /tmp/reliefmesh-backend.pid
+      - name: Start frontend development server
+        working-directory: frontend
+        run: |
+          npm run dev -- --hostname 127.0.0.1 > /tmp/reliefmesh-frontend.log 2>&1 &
+          echo $! > /tmp/reliefmesh-frontend.pid
+      - name: Verify services and snapshot
+        run: |
+          python - <<'PY'
+          import json, time, urllib.request, urllib.error
+          def get(url, key=None):
+              headers = {'X-API-Key': key} if key else {}
+              with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5) as response:
+                  return response.status, json.load(response)
+          for url in ('http://127.0.0.1:8000/health','http://127.0.0.1:3000/api/backend-preview'):
+              for attempt in range(60):
+                  try:
+                      if url.endswith('/health'):
+                          status, body = get(url)
+                          assert status == 200 and body['database'] == 'ok'
+                      else:
+                          status, body = get(url)
+                          assert status == 200 and body['mode'] == 'read_only_preview'
+                          assert isinstance(body['revision'], int)
+                          assert body['incidents'] == [] and body['resources'] == []
+                      break
+                  except Exception:
+                      if attempt == 59: raise
+                      time.sleep(2)
+          # The backend snapshot requires a key, even in CI.
+          try:
+              get('http://127.0.0.1:8000/integration/v1/snapshot-preview')
+              raise AssertionError('Unauthenticated snapshot unexpectedly allowed')
+          except urllib.error.HTTPError as exc:
+              assert exc.code == 401, exc.code
+          print('Integration smoke test passed')
+          PY
+      - name: Print diagnostics on failure
+        if: failure()
+        run: |
+          tail -n 120 /tmp/reliefmesh-backend.log || true
+          tail -n 120 /tmp/reliefmesh-frontend.log || true
