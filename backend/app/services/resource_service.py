@@ -6,6 +6,7 @@ from app.models.enums import ResourceStatus
 from app.models.resource import Resource
 from app.services import id_generator
 from app.services.action_log_service import record_action
+from app.services.operational_revision import bump_operational_revision
 from app.services.state_machine import ALLOWED_RESOURCE_TRANSITIONS, assert_transition_allowed
 from app.schemas.resource import ResourceCreate, ResourceResponse, ResourceStatusUpdate
 
@@ -43,6 +44,8 @@ def create_resource(db: Session, payload: ResourceCreate) -> ResourceResponse:
             action="resource_registered",
             resource_id=resource.id,
         )
+
+        bump_operational_revision(db)
 
         db.commit()
         db.refresh(resource)
@@ -98,6 +101,7 @@ def update_resource_status(
             resource_id=resource.id,
             metadata={"new_status": payload.status.value},
         )
+        bump_operational_revision(db)
         db.commit()
         db.refresh(resource)
         return _to_response(resource)
