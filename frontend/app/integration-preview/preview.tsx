@@ -3,15 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { decideRevision } from "../../lib/services/revision-guard";
 import { refreshFailed, refreshSucceeded } from "../../lib/services/refresh-state";
 import { classifyPreviewStatus, previewStatusMessage } from "../../lib/services/preview-connection-status";
+import { validPreviewProjection } from "../../lib/services/preview-projection";
 type Incident = { id:string; location:string; type:string; severity:string; status:string; operational_phase:string; priority_score:number|null; people_affected:number|null };
 type Resource = { id:string; location:string; type:string; status:string; capacity:number|null };
 type Assignment = {id:string;incident_id:string;resource_id:string;status:string;assigned_at:string};
 type Recommendation = {incident:string;version:number;state:string;recommended_resources:string[]};
 type Preview = { mode:"read_only_preview"; generated_at:string; revision:number; incidents:Incident[]; resources:Resource[]; assignments:Assignment[]; recommendations:Recommendation[] };
 function isPreview(v: unknown): v is Preview {
-  if (!v || typeof v !== "object") return false;
-  const p = v as Partial<Preview>;
-  return p.mode === "read_only_preview" && typeof p.generated_at === "string" && typeof p.revision === "number" && Number.isSafeInteger(p.revision) && p.revision >= 0 && Array.isArray(p.incidents) && Array.isArray(p.resources) && Array.isArray(p.assignments) && Array.isArray(p.recommendations);
+  return validPreviewProjection(v);
 }
 export function BackendPreview() {
   const [data,setData] = useState<Preview|null>(null);
