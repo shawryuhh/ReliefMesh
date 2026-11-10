@@ -17,6 +17,7 @@ from app.models.assignment import Assignment
 from app.models.recommendation import Recommendation
 from app.models.report import Report
 from app.models.action_log import ActionLog
+from app.services.operational_revision import current_operational_revision
 
 router = APIRouter(prefix="/integration/v1", tags=["integration"], dependencies=[Depends(verify_api_key)])
 
@@ -31,6 +32,7 @@ def snapshot_preview(db: Session = Depends(get_db)):
 
     # SET TRANSACTION must precede the first query in this session.
     db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+    revision = current_operational_revision(db)
     incidents = db.scalars(select(Incident).order_by(Incident.id)).all()
     resources = db.scalars(select(Resource).order_by(Resource.id)).all()
     assignments = db.scalars(select(Assignment).order_by(Assignment.id)).all()
@@ -39,11 +41,10 @@ def snapshot_preview(db: Session = Depends(get_db)):
     events = db.scalars(select(ActionLog).order_by(ActionLog.id)).all()
     if any(len(rows) > 500 for rows in (incidents, resources, assignments, recommendations, reports, events)):
         raise HTTPException(status_code=503, detail="Snapshot exceeds development preview limit")
-    # Explicitly no monotonic revision yet; callers must not treat this as
-    # an incremental synchronization protocol.
+    # Revision tracks service-layer commits; maintenance/reset paths require further audit.
     return {
         "schema_version": 1,
-        "revision": None,
+        "revision": revision,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "complete": True,
         "incidents": [{
