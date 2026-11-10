@@ -1,21 +1,8 @@
 import "server-only";
 import { BackendReadError } from "./backend-read-client";
+import { isSnapshotEnvelope, type SnapshotEnvelope } from "./snapshot-contract";
 
-type Snapshot = {
-  schema_version: 1;
-  revision: null;
-  generated_at: string;
-  complete: true;
-  incidents: unknown[];
-  resources: unknown[];
-  assignments: unknown[];
-  recommendations: unknown[];
-  reports: unknown[];
-  activity: unknown[];
-};
-const collections = ["incidents","resources","assignments","recommendations","reports","activity"] as const;
-
-export async function fetchSnapshotPreview(): Promise<Snapshot> {
+export async function fetchSnapshotPreview(): Promise<SnapshotEnvelope> {
   const base = process.env.RELIEFMESH_BACKEND_URL;
   if (!base) throw new BackendReadError("not_configured");
   let origin: string;
@@ -49,12 +36,6 @@ export async function fetchSnapshotPreview(): Promise<Snapshot> {
   if (body.length > 2_000_000) throw new BackendReadError("invalid_response");
   let data: unknown;
   try { data = JSON.parse(body); } catch { throw new BackendReadError("invalid_response"); }
-  if (!data || typeof data !== "object" || Array.isArray(data))
-    throw new BackendReadError("invalid_response");
-  const v = data as Record<string, unknown>;
-  if (v.schema_version !== 1 || v.complete !== true || v.revision !== null ||
-      typeof v.generated_at !== "string" || !Number.isFinite(Date.parse(v.generated_at)) ||
-      collections.some(k => !Array.isArray(v[k])))
-    throw new BackendReadError("invalid_response");
-  return v as Snapshot;
+  if (!isSnapshotEnvelope(data)) throw new BackendReadError("invalid_response");
+  return data;
 }
