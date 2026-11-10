@@ -2,13 +2,13 @@ name: ReliefMesh AI and automation checks
 
 on:
   push:
-    branches: [integration]
+    branches: [main, integration]
     paths:
       - 'ai/**'
       - 'n8n/**'
       - '.github/workflows/ai-automation-checks.yml'
   pull_request:
-    branches: [integration]
+    branches: [main, integration]
     paths:
       - 'ai/**'
       - 'n8n/**'
