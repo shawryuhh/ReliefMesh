@@ -42,7 +42,8 @@ def test_snapshot_returns_complete_read_only_collections(client, monkeypatch):
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["schema_version"] == 1
-    assert body["revision"] is None  # Not yet a versioned sync protocol.
+    assert isinstance(body["revision"], int)
+    assert body["revision"] >= 2  # Incident and resource creation both committed.
     assert body["complete"] is True
     assert any(row["id"] == incident_id for row in body["incidents"])
     assert any(row["id"] == resource_id for row in body["resources"])
