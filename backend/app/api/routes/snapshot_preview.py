@@ -25,8 +25,7 @@ router = APIRouter(prefix="/integration/v1", tags=["integration"], dependencies=
 @router.get("/snapshot-preview")
 def snapshot_preview(db: Session = Depends(get_db)):
     settings = get_settings()
-    # This route contains original report text. Never expose it with the
-    # application's development-default disabled authentication.
+    # Report text is deliberately excluded from this shared-key development preview.
     if settings.app_env not in ("local", "test") or not settings.auth_enabled or not settings.api_key:
         raise HTTPException(status_code=503, detail="Authenticated snapshot preview unavailable")
 
@@ -77,9 +76,7 @@ def snapshot_preview(db: Session = Depends(get_db)):
         } for r in recommendations],
         "reports": [{
             "id": r.id, "incident_id": r.incident_id,
-            "originalText": r.original_text, "originalLanguage": r.original_language,
             "receivedAt": r.received_at.isoformat(),
-            "translatedText": r.translated_text, "translatedLanguage": r.translated_language,
         } for r in reports],
         "activity": [{
             "id": e.id, "timestamp": e.timestamp.isoformat(), "source": e.source,
