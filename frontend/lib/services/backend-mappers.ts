@@ -31,6 +31,11 @@ function oneOf<T extends string>(value: unknown, options: readonly T[], field: s
 const incidentTypes = ["flood","medical","evacuation","landslide","supplies"] as const;
 const resourceTypes = ["ambulance","rescue","hospital","shelter"] as const;
 const phases = ["received","analyzing","prioritized","recommended","awaiting_approval","dispatched","blocked","replanning","awaiting_replacement","resolved","rejected"] as const;
+function severityValue(value: unknown): number {
+  const levels: Record<string, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
+  if (typeof value !== "string" || !(value in levels)) throw new ContractMismatch("incident.severity");
+  return levels[value];
+}
 const resourceStates = ["AVAILABLE","DISPATCHED","ACTIVE","UNAVAILABLE"] as const;
 
 export function mapIncident(value: unknown): Incident {
@@ -47,7 +52,7 @@ export function mapIncident(value: unknown): Incident {
     id:str(v.id,"incident.id"),location:str(v.location,"incident.location"),
     latitude:num(v.latitude,"incident.latitude"),longitude:num(v.longitude,"incident.longitude"),
     type:oneOf(v.type,incidentTypes,"incident.type"),
-    severity:num(v.severity,"incident.severity"),priority:num(v.priority_score,"incident.priority_score"),
+    severity:severityValue(v.severity),priority:num(v.priority_score,"incident.priority_score"),
     people:num(v.people_affected,"incident.people_affected"),
     needs:strings(v.needs,"incident.needs"),confidence:num(v.confidence,"incident.confidence"),
     status:oneOf(v.operational_phase,phases,"incident.operational_phase"),
