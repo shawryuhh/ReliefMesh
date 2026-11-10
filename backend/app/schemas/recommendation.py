@@ -102,6 +102,33 @@ class RecommendationApprove(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class RecommendationModify(BaseModel):
+    """Body for POST .../recommendation/modify.
+
+    Allows a human coordinator to replace the resource list of the currently
+    pending recommendation, advancing its version while keeping it PENDING for
+    explicit approval.
+    """
+
+    version: int = Field(gt=0, description="The version of the currently pending plan being modified.")
+    recommended_resources: list[str] = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RecommendationReject(BaseModel):
+    """Body for POST .../recommendation/reject.
+
+    Allows a human coordinator to reject the currently pending recommendation
+    with an explicit reason without dispatching any new resources.
+    """
+
+    version: int = Field(gt=0, description="The version of the currently pending plan being rejected.")
+    reason: str = Field(min_length=1, max_length=500, description="Coordinator reason for rejecting the plan.")
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RecommendationResponse(BaseModel):
     """Matches frontend's `Recommendation` type (types/index.ts) field-for-field,
     plus internal bookkeeping fields (id, decided_by/at, timestamps) the

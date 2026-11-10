@@ -51,16 +51,16 @@ STAGES = ["awaiting_approval", "dispatched", "blocked", "awaiting_replacement", 
 # Order matters: ambulances are created in this order so the canonical
 # narrative's AMB-02 and AMB-05 land on the resources actually used in it.
 FLEET = [
-    ("ambulance", "Sector 12 Depot", ["medical"], 2),
-    ("ambulance", "Sector 12 Depot", ["medical"], 2),  # -> AMB-02
-    ("ambulance", "Sector 9 Depot", ["medical"], 2),
-    ("ambulance", "Sector 9 Depot", ["medical"], 2),
-    ("ambulance", "Sector 4 Depot", ["medical"], 2),  # -> AMB-05
-    ("rescue_unit", "Central Depot", ["water_rescue", "medical"], 4),  # -> RESCUE-01
-    ("rescue_unit", "North Depot", ["water_rescue"], 4),
-    ("volunteer", "Community Hall", ["evacuation_support"], None),
-    ("shelter", "Government School, Sector 8", [], 200),
-    ("hospital", "City General Hospital", ["trauma", "medical"], 50),
+    ("ambulance", "Sector 12 Depot", 12.953, 77.640, ["basic_life_support", "medical"], 2),
+    ("ambulance", "Sector 12 Depot", 12.949, 77.614, ["advanced_life_support", "medical"], 2),  # -> AMB-02
+    ("ambulance", "Sector 9 Depot", 12.921, 77.605, ["advanced_life_support", "medical"], 2),
+    ("ambulance", "Sector 9 Depot", 12.906, 77.655, ["basic_life_support", "medical"], 2),
+    ("ambulance", "Sector 4 Depot", 12.936, 77.664, ["advanced_life_support", "medical"], 2),  # -> AMB-05
+    ("rescue_unit", "Central Depot", 12.928, 77.602, ["water_rescue", "first_aid", "medical"], 6),  # -> RESCUE-01
+    ("rescue_unit", "North Depot", 12.932, 77.619, ["water_rescue", "first_aid"], 6),
+    ("volunteer", "Community Hall", 12.925, 77.650, ["evacuation_support"], None),
+    ("shelter", "Agara Relief Centre", 12.904, 77.620, ["shelter", "supplies"], 120),
+    ("hospital", "South City Medical Centre", 12.914, 77.630, ["emergency_care", "icu", "trauma", "medical"], 18),
 ]
 
 
@@ -89,12 +89,14 @@ def reset_tables(db: Session) -> None:
 
 def seed_fleet(db: Session) -> None:
     print("Seeded fleet:")
-    for resource_type, location, capabilities, capacity in FLEET:
+    for resource_type, location, latitude, longitude, capabilities, capacity in FLEET:
         resource = resource_service.create_resource(
             db,
             ResourceCreate(
                 type=resource_type,
                 location=location,
+                latitude=latitude,
+                longitude=longitude,
                 capabilities=capabilities,
                 capacity=capacity,
             ),

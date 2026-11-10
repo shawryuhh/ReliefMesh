@@ -1,10 +1,11 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.models.assignment import Assignment
-from app.models.enums import AssignmentStatus, IncidentStatus
+from app.models.enums import AssignmentStatus, IncidentStatus, OperationalPhase, ResourceStatus
 from app.models.incident import Incident
+from app.models.resource import Resource
 from app.services import id_generator
 from app.services.operational_revision import bump_operational_revision
 from app.services.action_log_service import record_action
@@ -128,19 +129,69 @@ def update_incident(db: Session, incident_id: str, payload: IncidentUpdate) -> I
 
 def resolve_incident(db: Session, incident_id: str, reason: str | None) -> IncidentResponse:
     try:
-        incident = get_incident_or_404(db, incident_id)
+        incident = db.scalars(
+            select(Incident).where(Incident.id == incident_id).with_for_update()
+        ).first()
+        if incident is None:
+            raise NotFoundError(f"Incident '{incident_id}' not found.")
+
         assert_transition_allowed(
             "Incident", incident.status, IncidentStatus.RESOLVED, ALLOWED_INCIDENT_TRANSITIONS
         )
+        if incident.operational_phase in (
+            OperationalPhase.AWAITING_APPROVAL,
+            OperationalPhase.AWAITING_REPLACEMENT,
+            OperationalPhase.BLOCKED,
+            OperationalPhase.REPLANNING,
+        ):
+            raise ConflictError(
+                f"Incident '{incident.id}' cannot be resolved while in phase '{incident.operational_phase.value}'.",
+                code="STALE_PLAN",
+            )
+
+        live_assignments = list(
+            db.scalars(
+                select(Assignment)
+                .where(
+                    Assignment.incident_id == incident.id,
+                    Assignment.status.in_(LIVE_ASSIGNMENT_STATUSES),
+                )
+                .order_by(Assignment.id)
+                .with_for_update()
+            ).all()
+        )
+        if live_assignments:
+            resource_ids = sorted({a.resource_id for a in live_assignments})
+            resources = {
+                r.id: r
+                for r in db.scalars(
+                    select(Resource)
+                    .where(Resource.id.in_(resource_ids))
+                    .order_by(Resource.id)
+                    .with_for_update()
+                ).all()
+            }
+            for assignment in live_assignments:
+                assignment.status = AssignmentStatus.COMPLETED
+                assignment.completed_at = func.now()
+                resource = resources.get(assignment.resource_id)
+                if resource is not None and resource.status in (
+                    ResourceStatus.DISPATCHED,
+                    ResourceStatus.ACTIVE,
+                ):
+                    resource.status = ResourceStatus.AVAILABLE
+
         incident.status = IncidentStatus.RESOLVED
+        incident.operational_phase = OperationalPhase.RESOLVED
         db.flush()
 
         record_action(
             db,
-            source="human",
+            source="coordinator",
             action="incident_resolved",
             reason=reason,
             incident_id=incident.id,
+            metadata={"people": incident.people_affected or 0},
         )
         bump_operational_revision(db)
         db.commit()

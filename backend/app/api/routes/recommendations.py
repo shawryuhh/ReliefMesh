@@ -6,7 +6,9 @@ from app.api.deps import get_db, require_coordinator, verify_any_api_key, verify
 from app.schemas.recommendation import (
     RecommendationApprove,
     RecommendationCreate,
+    RecommendationModify,
     RecommendationProposeReplacement,
+    RecommendationReject,
     RecommendationResponse,
 )
 from app.services import recommendation_service
@@ -96,3 +98,39 @@ def approve_recommendation(
     approved_by: str = Depends(require_coordinator),
 ) -> RecommendationResponse:
     return recommendation_service.approve_recommendation(db, incident_id, payload, approved_by)
+
+
+@router.post(
+    "/{incident_id}/recommendation/modify",
+    response_model=RecommendationResponse,
+    summary="Modify the current pending recommendation",
+    description="Coordinator-only action: replaces the resource list of the currently pending "
+    "recommendation after validating availability and capability coverage, increments its "
+    "version, and keeps it PENDING for explicit coordinator approval.",
+    responses=responses(NOT_FOUND, CONFLICT, VALIDATION_FAILED),
+)
+def modify_recommendation(
+    incident_id: str,
+    payload: RecommendationModify,
+    db: Session = Depends(get_db),
+    modified_by: str = Depends(require_coordinator),
+) -> RecommendationResponse:
+    return recommendation_service.modify_recommendation(db, incident_id, payload, modified_by)
+
+
+@router.post(
+    "/{incident_id}/recommendation/reject",
+    response_model=RecommendationResponse,
+    summary="Reject the current pending recommendation",
+    description="Coordinator-only action: marks the currently pending recommendation as REJECTED "
+    "with an explicit reason. Dispatches nothing; if a replacement proposal is rejected, existing "
+    "dispatched responders stay active.",
+    responses=responses(NOT_FOUND, CONFLICT, VALIDATION_FAILED),
+)
+def reject_recommendation(
+    incident_id: str,
+    payload: RecommendationReject,
+    db: Session = Depends(get_db),
+    rejected_by: str = Depends(require_coordinator),
+) -> RecommendationResponse:
+    return recommendation_service.reject_recommendation(db, incident_id, payload, rejected_by)

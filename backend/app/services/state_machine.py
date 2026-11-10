@@ -24,6 +24,7 @@ ALLOWED_INCIDENT_TRANSITIONS: dict[IncidentStatus, set[IncidentStatus]] = {
     IncidentStatus.UNASSIGNED: {IncidentStatus.ASSIGNED, IncidentStatus.CANCELLED},
     IncidentStatus.ASSIGNED: {
         IncidentStatus.ACTIVE,
+        IncidentStatus.RESOLVED,
         IncidentStatus.UNASSIGNED,
         IncidentStatus.CANCELLED,
     },
@@ -63,8 +64,16 @@ PHASES_ALLOWING_ACTION: dict[str, set[OperationalPhase]] = {
         OperationalPhase.RECOMMENDED,
     },
     "approve_recommendation": {OperationalPhase.AWAITING_APPROVAL},
+    "modify_recommendation": {
+        OperationalPhase.AWAITING_APPROVAL,
+        OperationalPhase.AWAITING_REPLACEMENT,
+    },
+    "reject_recommendation": {
+        OperationalPhase.AWAITING_APPROVAL,
+        OperationalPhase.AWAITING_REPLACEMENT,
+    },
     "report_disruption": {OperationalPhase.DISPATCHED, OperationalPhase.BLOCKED},
-    "propose_replacement": {OperationalPhase.BLOCKED},
+    "propose_replacement": {OperationalPhase.BLOCKED, OperationalPhase.REPLANNING},
     "approve_replacement": {OperationalPhase.AWAITING_REPLACEMENT},
 }
 

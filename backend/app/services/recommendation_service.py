@@ -33,6 +33,7 @@ from app.core.exceptions import (
     ResourceNotAssignedError,
     ResourceUnavailableError,
     StaleRecommendationError,
+    ValidationFailedError,
 )
 from app.models.assignment import Assignment
 from app.models.enums import AssignmentStatus, IncidentStatus, OperationalPhase, RecommendationState, ResourceStatus
@@ -42,7 +43,9 @@ from app.models.resource import Resource
 from app.schemas.recommendation import (
     RecommendationApprove,
     RecommendationCreate,
+    RecommendationModify,
     RecommendationProposeReplacement,
+    RecommendationReject,
     RecommendationResponse,
 )
 from app.services import id_generator
@@ -531,6 +534,162 @@ def approve_recommendation(
         raise ConflictError(
             "One or more resources were assigned to another incident concurrently. Retry."
         )
+    except Exception:
+        db.rollback()
+        raise
+
+
+def modify_recommendation(
+    db: Session, incident_id: str, payload: RecommendationModify, modified_by: str
+) -> RecommendationResponse:
+    """Coordinator modification of the currently pending recommendation.
+
+    Validates resource availability and capability coverage, updates the
+    resource list, and increments the recommendation version while keeping
+    the recommendation PENDING for explicit coordinator approval.
+    """
+    try:
+        incident = lock_incident(db, incident_id)
+        if incident.status in TERMINAL_INCIDENT_STATUSES:
+            raise ConflictError(
+                f"Incident '{incident.id}' is {incident.status.value}; cannot modify a recommendation."
+            )
+
+        recommendation = _lock_pending_recommendation(db, incident_id)
+        if recommendation is None:
+            raise StaleRecommendationError(
+                f"Incident '{incident_id}' has no pending recommendation to modify."
+            )
+        if recommendation.version != payload.version:
+            raise StaleRecommendationError(
+                f"Recommendation version {payload.version} is stale; the current pending "
+                f"version is {recommendation.version}."
+            )
+
+        assert_phase_allows(incident.id, incident.operational_phase, "modify_recommendation")
+        _assert_resource_ids_valid(db, payload.recommended_resources)
+
+        if (
+            recommendation.replacement_for_resource_id
+            and recommendation.replacement_for_resource_id in payload.recommended_resources
+        ):
+            raise InvalidResourcesError(
+                f"A replacement plan cannot include the resource it replaces ({recommendation.replacement_for_resource_id})."
+            )
+
+        live_ids = {a.resource_id for a in _live_assignments(db, incident.id, lock=False)}
+        resources = lock_resources(db, payload.recommended_resources)
+        for resource in resources:
+            if resource.type not in ("ambulance", "rescue"):
+                raise InvalidResourcesError(
+                    f"Resource '{resource.id}' (type '{resource.type}') cannot be dispatched in a response plan."
+                )
+            if resource.status != ResourceStatus.AVAILABLE and resource.id not in live_ids:
+                raise ResourceUnavailableError(
+                    f"Resource '{resource.id}' is not AVAILABLE."
+                )
+
+        has_ambulance = any(r.type == "ambulance" for r in resources)
+        has_water_rescue = any("water_rescue" in (r.capabilities or []) for r in resources)
+        if not has_ambulance or not has_water_rescue:
+            raise ValidationFailedError(
+                "Modified plan must cover both ambulance and water rescue capabilities.",
+                code="INSUFFICIENT_COVERAGE",
+            )
+
+        recommendation.recommended_resources = list(payload.recommended_resources)
+        recommendation.version = recommendation.version + 1
+        recommendation.reason = "plan.modified"
+        recommendation.explanation = [
+            {"key": "explain.selected", "params": {"id": rid}}
+            for rid in payload.recommended_resources
+        ]
+        db.flush()
+
+        record_action(
+            db,
+            source="coordinator",
+            action="modified",
+            incident_id=incident.id,
+            metadata={
+                "recommendation_id": recommendation.id,
+                "version": recommendation.version,
+                "resources": _resources_label(payload.recommended_resources),
+                "modified_by": modified_by,
+            },
+        )
+        bump_operational_revision(db)
+
+        db.commit()
+        db.refresh(recommendation)
+        return to_response(recommendation)
+    except Exception:
+        db.rollback()
+        raise
+
+
+def reject_recommendation(
+    db: Session, incident_id: str, payload: RecommendationReject, rejected_by: str
+) -> RecommendationResponse:
+    """Coordinator rejection of the currently pending recommendation.
+
+    Dispatches nothing. If a replacement recommendation is rejected, existing
+    dispatched responders remain active and the incident stays in BLOCKED phase.
+    """
+    try:
+        incident = lock_incident(db, incident_id)
+        if incident.status in TERMINAL_INCIDENT_STATUSES:
+            raise ConflictError(
+                f"Incident '{incident.id}' is {incident.status.value}; cannot reject a recommendation."
+            )
+
+        recommendation = _lock_pending_recommendation(db, incident_id)
+        if recommendation is None:
+            raise StaleRecommendationError(
+                f"Incident '{incident_id}' has no pending recommendation to reject."
+            )
+        if recommendation.version != payload.version:
+            raise StaleRecommendationError(
+                f"Recommendation version {payload.version} is stale; the current pending "
+                f"version is {recommendation.version}."
+            )
+
+        assert_phase_allows(incident.id, incident.operational_phase, "reject_recommendation")
+
+        trimmed_reason = payload.reason.strip()[:500]
+        if not trimmed_reason:
+            raise ValidationFailedError("Rejection reason must not be blank.")
+
+        recommendation.state = RecommendationState.REJECTED
+        recommendation.decided_by = rejected_by
+        recommendation.decided_at = func.now()
+
+        if recommendation.replacement_for_resource_id is not None:
+            incident.operational_phase = OperationalPhase.BLOCKED
+        else:
+            incident.operational_phase = OperationalPhase.REJECTED
+            incident.status = IncidentStatus.CANCELLED
+
+        db.flush()
+
+        record_action(
+            db,
+            source="coordinator",
+            action="rejected",
+            reason=trimmed_reason,
+            incident_id=incident.id,
+            metadata={
+                "recommendation_id": recommendation.id,
+                "version": recommendation.version,
+                "reason": trimmed_reason,
+                "rejected_by": rejected_by,
+            },
+        )
+        bump_operational_revision(db)
+
+        db.commit()
+        db.refresh(recommendation)
+        return to_response(recommendation)
     except Exception:
         db.rollback()
         raise

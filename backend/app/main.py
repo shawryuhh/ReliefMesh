@@ -6,6 +6,7 @@ from app.api.routes import (
     activity_log,
     assignments,
     dashboard,
+    demo_integration,
     disruptions,
     health,
     incidents,
@@ -115,3 +116,4 @@ app.include_router(disruptions.router)
 
 # Authenticated read-only development snapshot; not a production sync API.
 app.include_router(snapshot_preview.router)
+app.include_router(demo_integration.router)

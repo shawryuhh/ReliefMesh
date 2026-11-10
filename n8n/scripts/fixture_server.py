@@ -13,8 +13,10 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import os
 from pathlib import Path
 from urllib.parse import urlsplit
+import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIX = '/fixture/v1'
@@ -47,15 +49,40 @@ def initial():
 
 
 class Fixture:
-    def __init__(self, db):
+    def __init__(self, db, backend_url=None):
         self.db = str(db)
+        self.backend_url = backend_url.rstrip('/') if backend_url else None
         with closing(sqlite3.connect(self.db)) as con, con:
             con.execute('CREATE TABLE IF NOT EXISTS fixture (id INTEGER PRIMARY KEY, state TEXT)')
             con.execute('INSERT OR IGNORE INTO fixture VALUES (1, ?)', (json.dumps(initial()),))
 
+    def _sync_backend(self, workflow, actor='automation', key=None):
+        if not self.backend_url:
+            return
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Fixture-Actor': actor,
+        }
+        api_key = (
+            os.environ.get('RELIEFMESH_COORDINATOR_API_KEY')
+            if actor == 'fixture-coordinator'
+            else os.environ.get('RELIEFMESH_AUTOMATION_API_KEY')
+        ) or os.environ.get('RELIEFMESH_API_KEY')
+        if api_key:
+            headers['X-API-Key'] = api_key
+        req = urllib.request.Request(
+            f'{self.backend_url}/integration/v1/demo/n8n-sync',
+            data=json.dumps({'workflow': workflow, 'idempotency_key': key}).encode(),
+            headers=headers,
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            resp.read()
+
     def call(self, method, path, body=None, actor='automation', key=None):
         body = body or {}
         path = urlsplit(path).path
+        sync_stage = None
         with closing(sqlite3.connect(self.db, timeout=15)) as con, con:
             con.execute('BEGIN IMMEDIATE')
             s = json.loads(con.execute('SELECT state FROM fixture WHERE id=1').fetchone()[0])
@@ -67,6 +94,17 @@ class Fixture:
                     result = {'code': 'INJECTED_TRANSIENT' if status >= 500 or status == 429 else 'INJECTED_REJECTION'}
                 else:
                     status, result = self.route(s, method, path, body, actor, key)
+                    if status in (200, 202) and not result.get('duplicate'):
+                        if path == '/fixture/control/approve':
+                            sync_stage = 'operator_approve'
+                        elif path == PREFIX + '/automation/events':
+                            et = body.get('event_type')
+                            if et == 'report_received':
+                                sync_stage = 'intake'
+                            elif et == 'road_obstruction':
+                                sync_stage = 'replan'
+                            elif et == 'response_completed':
+                                sync_stage = 'resolution'
             except Rejected as e:
                 s = before  # rejection must not partially change state
                 status, result = e.status, {'code': e.code}
@@ -74,6 +112,8 @@ class Fixture:
                 s['requests'].append({'path': path, 'status': status, 'key': key,
                                       'body_hash': digest(body)})
             con.execute('UPDATE fixture SET state=? WHERE id=1', (json.dumps(s),))
+        if sync_stage:
+            self._sync_backend(sync_stage, actor=actor, key=key)
         return status, {**result, 'fixture': True}
 
     def audit(self, s, kind, **data):
@@ -281,8 +321,8 @@ class Fixture:
         raise Rejected(404, 'NOT_FOUND')
 
 
-def serve(db, port):
-    fixture = Fixture(db)
+def serve(db, port, backend_url=None):
+    fixture = Fixture(db, backend_url=backend_url)
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -321,6 +361,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8094)
     parser.add_argument('--db', type=Path, default=ROOT / '.runtime' / 'fixture.sqlite')
+    parser.add_argument('--backend-url', type=str, default=os.environ.get('RELIEFMESH_BACKEND_URL'))
     args = parser.parse_args()
     args.db.parent.mkdir(parents=True, exist_ok=True)
-    serve(args.db, args.port)
+    serve(args.db, args.port, backend_url=args.backend_url)
