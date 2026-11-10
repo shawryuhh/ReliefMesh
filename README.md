@@ -1,5 +1,5 @@
 # ReliefMesh
-### AI-assisted disaster response coordination | Solo, AI-assisted engineering project
+### AI-assisted disaster response coordination platform
 
 [![Frontend checks](https://github.com/shawryuhh/ReliefMesh/actions/workflows/frontend-checks.yml/badge.svg?branch=main)](https://github.com/shawryuhh/ReliefMesh/actions)
 [![Backend checks](https://github.com/shawryuhh/ReliefMesh/actions/workflows/backend-checks.yml/badge.svg?branch=main)](https://github.com/shawryuhh/ReliefMesh/actions)
