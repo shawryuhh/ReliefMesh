@@ -1,0 +1,14 @@
+# Web Framework
+fastapi>=0.103.0
+uvicorn>=0.23.2
+pydantic>=2.3.0
+
+# AI & LLM Integration
+langchain>=0.1.0
+langchain-google-genai>=0.0.9
+google-generativeai>=0.4.0
+
+# Testing & Utilities
+pytest>=8.0.0
+httpx>=0.27.0
+python-dotenv>=1.0.0

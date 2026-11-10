@@ -1,0 +1,526 @@
+{
+  "verification": "ACTUAL_N8N_WITH_LOCAL_CONTRACT_DOUBLE",
+  "n8n_version": "2.39.8",
+  "real_backend_integration": false,
+  "executions": [
+    {
+      "case": "01-intake-transient-retry",
+      "workflow": "intake",
+      "execution_id": "15",
+      "engine_status": "success",
+      "result": {
+        "event_id": "demo-run-01-report-01",
+        "accepted": true,
+        "duplicate": false,
+        "incident_id": "INC-1042",
+        "revision": 2,
+        "phase": "awaiting_approval",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "event",
+          "attempt": 1,
+          "key": "demo-run-01-report-01"
+        },
+        {
+          "stage": "event",
+          "attempt": 2,
+          "key": "demo-run-01-report-01"
+        },
+        {
+          "stage": "event",
+          "attempt": 3,
+          "key": "demo-run-01-report-01"
+        }
+      ]
+    },
+    {
+      "case": "02-intake-duplicate",
+      "workflow": "intake",
+      "execution_id": "16",
+      "engine_status": "success",
+      "result": {
+        "event_id": "demo-run-01-report-01",
+        "accepted": true,
+        "duplicate": true,
+        "incident_id": "INC-1042",
+        "revision": 2,
+        "phase": "awaiting_approval",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "event",
+          "attempt": 1,
+          "key": "demo-run-01-report-01"
+        }
+      ]
+    },
+    {
+      "case": "03-gate-one-wait",
+      "workflow": "dispatch",
+      "execution_id": "17",
+      "engine_status": "success",
+      "result": {
+        "status": "WAIT_FOR_HUMAN",
+        "phase": "awaiting_approval",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "poll",
+          "attempt": 1,
+          "key": "poll:17"
+        }
+      ]
+    },
+    {
+      "case": "04-initial-dispatch",
+      "workflow": "dispatch",
+      "execution_id": "18",
+      "engine_status": "success",
+      "result": {
+        "status": "SIMULATED_DELIVERY_RECORDED",
+        "command_id": "fixture-INC-1042-v1",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "poll",
+          "attempt": 1,
+          "key": "poll:18"
+        },
+        {
+          "stage": "claim",
+          "attempt": 1,
+          "key": "claim:18:fixture-INC-1042-v1"
+        },
+        {
+          "stage": "validate",
+          "attempt": 1,
+          "key": "fixture-INC-1042-v1:validate:1"
+        },
+        {
+          "stage": "delivery",
+          "attempt": 1,
+          "key": "fixture-INC-1042-v1"
+        },
+        {
+          "stage": "callback",
+          "attempt": 1,
+          "key": "fixture-INC-1042-v1:result:1:accepted"
+        }
+      ]
+    },
+    {
+      "case": "05-no-duplicate-command",
+      "workflow": "dispatch",
+      "execution_id": "19",
+      "engine_status": "success",
+      "result": {
+        "status": "NO_AUTHORIZED_COMMAND",
+        "phase": "dispatched",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "poll",
+          "attempt": 1,
+          "key": "poll:19"
+        }
+      ]
+    },
+    {
+      "case": "06-obstruction",
+      "workflow": "obstruction",
+      "execution_id": "20",
+      "engine_status": "success",
+      "result": {
+        "event_id": "demo-run-01-roadblock-01",
+        "accepted": true,
+        "duplicate": false,
+        "incident_id": "INC-1042",
+        "revision": 7,
+        "phase": "awaiting_replacement",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "event",
+          "attempt": 1,
+          "key": "demo-run-01-roadblock-01"
+        }
+      ]
+    },
+    {
+      "case": "07-obstruction-duplicate",
+      "workflow": "obstruction",
+      "execution_id": "21",
+      "engine_status": "success",
+      "result": {
+        "event_id": "demo-run-01-roadblock-01",
+        "accepted": true,
+        "duplicate": true,
+        "incident_id": "INC-1042",
+        "revision": 7,
+        "phase": "awaiting_replacement",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "event",
+          "attempt": 1,
+          "key": "demo-run-01-roadblock-01"
+        }
+      ]
+    },
+    {
+      "case": "08-gate-two-wait",
+      "workflow": "dispatch",
+      "execution_id": "22",
+      "engine_status": "success",
+      "result": {
+        "status": "WAIT_FOR_HUMAN",
+        "phase": "awaiting_replacement",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "poll",
+          "attempt": 1,
+          "key": "poll:22"
+        }
+      ]
+    },
+    {
+      "case": "09-replacement-dispatch",
+      "workflow": "dispatch",
+      "execution_id": "23",
+      "engine_status": "success",
+      "result": {
+        "status": "SIMULATED_DELIVERY_RECORDED",
+        "command_id": "fixture-INC-1042-v2",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "poll",
+          "attempt": 1,
+          "key": "poll:23"
+        },
+        {
+          "stage": "claim",
+          "attempt": 1,
+          "key": "claim:23:fixture-INC-1042-v2"
+        },
+        {
+          "stage": "validate",
+          "attempt": 1,
+          "key": "fixture-INC-1042-v2:validate:1"
+        },
+        {
+          "stage": "delivery",
+          "attempt": 1,
+          "key": "fixture-INC-1042-v2"
+        },
+        {
+          "stage": "callback",
+          "attempt": 1,
+          "key": "fixture-INC-1042-v2:result:1:accepted"
+        }
+      ]
+    },
+    {
+      "case": "10-completion",
+      "workflow": "completion",
+      "execution_id": "24",
+      "engine_status": "success",
+      "result": {
+        "event_id": "demo-run-01-complete-01",
+        "accepted": true,
+        "duplicate": false,
+        "incident_id": "INC-1042",
+        "revision": 11,
+        "phase": "resolved",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "event",
+          "attempt": 1,
+          "key": "demo-run-01-complete-01"
+        }
+      ]
+    },
+    {
+      "case": "11-completion-duplicate",
+      "workflow": "completion",
+      "execution_id": "25",
+      "engine_status": "success",
+      "result": {
+        "event_id": "demo-run-01-complete-01",
+        "accepted": true,
+        "duplicate": true,
+        "incident_id": "INC-1042",
+        "revision": 11,
+        "phase": "resolved",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "event",
+          "attempt": 1,
+          "key": "demo-run-01-complete-01"
+        }
+      ]
+    },
+    {
+      "case": "12-terminal-no-restart",
+      "workflow": "dispatch",
+      "execution_id": "26",
+      "engine_status": "success",
+      "result": {
+        "status": "NO_AUTHORIZED_COMMAND",
+        "phase": "resolved",
+        "fixture": true
+      },
+      "requests": [
+        {
+          "stage": "poll",
+          "attempt": 1,
+          "key": "poll:26"
+        }
+      ]
+    },
+    {
+      "case": "13-retry-exhaustion",
+      "workflow": "intake",
+      "execution_id": "27",
+      "engine_status": "error",
+      "result": {
+        "failure_id": "27:event",
+        "stage": "event",
+        "event_id": "demo-run-01-report-01",
+        "command_id": null,
+        "attempts": 4,
+        "error_code": "RETRY_EXHAUSTED",
+        "simulated": true
+      },
+      "requests": [
+        {
+          "stage": "event",
+          "attempt": 1,
+          "key": "demo-run-01-report-01"
+        },
+        {
+          "stage": "event",
+          "attempt": 2,
+          "key": "demo-run-01-report-01"
+        },
+        {
+          "stage": "event",
+          "attempt": 3,
+          "key": "demo-run-01-report-01"
+        },
+        {
+          "stage": "event",
+          "attempt": 4,
+          "key": "demo-run-01-report-01"
+        },
+        {
+          "stage": "failure_log",
+          "attempt": 1,
+          "key": "27:event"
+        }
+      ]
+    },
+    {
+      "case": "14-forbidden-no-retry",
+      "workflow": "intake",
+      "execution_id": "28",
+      "engine_status": "error",
+      "result": {
+        "failure_id": "28:event",
+        "stage": "event",
+        "event_id": "demo-run-01-report-01",
+        "command_id": null,
+        "attempts": 1,
+        "error_code": "INJECTED_REJECTION",
+        "simulated": true
+      },
+      "requests": [
+        {
+          "stage": "event",
+          "attempt": 1,
+          "key": "demo-run-01-report-01"
+        },
+        {
+          "stage": "failure_log",
+          "attempt": 1,
+          "key": "28:event"
+        }
+      ]
+    }
+  ],
+  "final_state": {
+    "fixture": true,
+    "phase": "resolved",
+    "revision": 11,
+    "reports": [
+      {
+        "source_report_id": "synthetic-report-01",
+        "channel": "synthetic",
+        "originalText": "Water entering Krishna Apartments Block C. My grandmother cannot walk.",
+        "originalLanguage": "en",
+        "receivedAt": "2026-09-20T10:00:00Z"
+      }
+    ],
+    "resources": {
+      "AMB-02": "available",
+      "AMB-05": "available",
+      "RESCUE-01": "available"
+    },
+    "assignments": {
+      "ASG-887": {
+        "assignment_id": "ASG-887",
+        "resource_id": "AMB-02",
+        "status": "superseded"
+      },
+      "ASG-888": {
+        "assignment_id": "ASG-888",
+        "resource_id": "RESCUE-01",
+        "status": "completed"
+      },
+      "ASG-889": {
+        "assignment_id": "ASG-889",
+        "resource_id": "AMB-05",
+        "status": "completed"
+      }
+    },
+    "approvals": [
+      {
+        "approval_id": "fixture-approval-1",
+        "actor": "fixture-coordinator",
+        "version": 1
+      },
+      {
+        "approval_id": "fixture-approval-2",
+        "actor": "fixture-coordinator",
+        "version": 2
+      }
+    ],
+    "deliveries": {
+      "fixture-INC-1042-v1": {
+        "delivery_reference": "simulated:fixture-INC-1042-v1",
+        "command_id": "fixture-INC-1042-v1",
+        "duplicate": false,
+        "simulated": true
+      },
+      "fixture-INC-1042-v2": {
+        "delivery_reference": "simulated:fixture-INC-1042-v2",
+        "command_id": "fixture-INC-1042-v2",
+        "duplicate": false,
+        "simulated": true
+      }
+    },
+    "audit": [
+      {
+        "id": "fixture-audit-1",
+        "type": "report_received",
+        "occurred_at": "2026-09-20T14:36:26.011359Z",
+        "event_id": "demo-run-01-report-01"
+      },
+      {
+        "id": "fixture-audit-2",
+        "type": "fixture_analysis_pending_plan",
+        "occurred_at": "2026-09-20T14:36:26.011373Z",
+        "simulated": true
+      },
+      {
+        "id": "fixture-audit-3",
+        "type": "approved",
+        "occurred_at": "2026-09-20T14:36:32.703369Z",
+        "command_id": "fixture-INC-1042-v1"
+      },
+      {
+        "id": "fixture-audit-4",
+        "type": "simulated_delivery",
+        "occurred_at": "2026-09-20T14:36:35.831180Z",
+        "command_id": "fixture-INC-1042-v1",
+        "resources": [
+          "AMB-02",
+          "RESCUE-01"
+        ]
+      },
+      {
+        "id": "fixture-audit-5",
+        "type": "delivery_accepted",
+        "occurred_at": "2026-09-20T14:36:35.847740Z",
+        "command_id": "fixture-INC-1042-v1"
+      },
+      {
+        "id": "fixture-audit-6",
+        "type": "road_obstruction",
+        "occurred_at": "2026-09-20T14:36:42.391757Z",
+        "event_id": "demo-run-01-roadblock-01",
+        "previous_eta_minutes": 6,
+        "eta_minutes": 24
+      },
+      {
+        "id": "fixture-audit-7",
+        "type": "fixture_replacement_pending",
+        "occurred_at": "2026-09-20T14:36:42.391771Z",
+        "simulated": true,
+        "eta_minutes": 9
+      },
+      {
+        "id": "fixture-audit-8",
+        "type": "replacement_approved",
+        "occurred_at": "2026-09-20T14:36:49.200023Z",
+        "command_id": "fixture-INC-1042-v2"
+      },
+      {
+        "id": "fixture-audit-9",
+        "type": "simulated_delivery",
+        "occurred_at": "2026-09-20T14:36:52.385081Z",
+        "command_id": "fixture-INC-1042-v2",
+        "resources": [
+          "AMB-05"
+        ]
+      },
+      {
+        "id": "fixture-audit-10",
+        "type": "delivery_accepted",
+        "occurred_at": "2026-09-20T14:36:52.407558Z",
+        "command_id": "fixture-INC-1042-v2"
+      },
+      {
+        "id": "fixture-audit-11",
+        "type": "incident_resolved",
+        "occurred_at": "2026-09-20T14:36:55.646911Z",
+        "event_id": "demo-run-01-complete-01"
+      }
+    ],
+    "failures": [
+      {
+        "failure_id": "27:event",
+        "stage": "event",
+        "event_id": "demo-run-01-report-01",
+        "command_id": null,
+        "attempts": 4,
+        "error_code": "RETRY_EXHAUSTED",
+        "simulated": true
+      },
+      {
+        "failure_id": "28:event",
+        "stage": "event",
+        "event_id": "demo-run-01-report-01",
+        "command_id": null,
+        "attempts": 1,
+        "error_code": "INJECTED_REJECTION",
+        "simulated": true
+      }
+    ]
+  }
+}
