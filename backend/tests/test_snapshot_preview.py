@@ -66,3 +66,16 @@ def test_snapshot_rejects_production_environment(client, monkeypatch):
                           headers={"X-API-Key": "snapshot-test-only-key"})
     assert response.status_code == 503
     assert "incidents" not in response.text
+
+
+def test_snapshot_excludes_report_text_fields(client, monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "auth_enabled", True)
+    monkeypatch.setattr(settings, "api_key", "snapshot-test-only-key")
+    response = client.get("/integration/v1/snapshot-preview",
+                          headers={"X-API-Key": "snapshot-test-only-key"})
+    assert response.status_code == 200, response.text
+    for report in response.json()["reports"]:
+        assert "originalText" not in report
+        assert "translatedText" not in report
+        assert "originalLanguage" not in report
