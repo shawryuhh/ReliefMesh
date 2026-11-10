@@ -4,13 +4,14 @@ import { decideRevision } from "../../lib/services/revision-guard";
 import { refreshFailed, refreshSucceeded } from "../../lib/services/refresh-state";
 import { classifyPreviewStatus, previewStatusMessage } from "../../lib/services/preview-connection-status";
 import { validPreviewProjection } from "../../lib/services/preview-projection";
+import { validPreviewReferences } from "../../lib/services/preview-references";
 type Incident = { id:string; location:string; type:string; severity:string; status:string; operational_phase:string; priority_score:number|null; people_affected:number|null };
 type Resource = { id:string; location:string; type:string; status:string; capacity:number|null };
 type Assignment = {id:string;incident_id:string;resource_id:string;status:string;assigned_at:string};
 type Recommendation = {incident:string;version:number;state:string;recommended_resources:string[]};
 type Preview = { mode:"read_only_preview"; generated_at:string; revision:number; incidents:Incident[]; resources:Resource[]; assignments:Assignment[]; recommendations:Recommendation[] };
 function isPreview(v: unknown): v is Preview {
-  return validPreviewProjection(v);
+  return validPreviewProjection(v) && validPreviewReferences(v);
 }
 export function BackendPreview() {
   const [data,setData] = useState<Preview|null>(null);
