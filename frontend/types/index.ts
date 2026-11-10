@@ -37,7 +37,7 @@ export interface ActivityEvent {
   metadata?: Record<string, string | number>;
 }
 export interface DashboardMetrics { criticalIncidents: number; activeIncidents: number; availableAmbulances: number; availableRescueTeams: number }
-export interface ServiceHealth { mode: "mock"; automation: "simulated" | "offline"; lastSync: string; stale: boolean }
+export interface ServiceHealth { mode: "mock" | "backend"; automation: "simulated" | "n8n" | "offline"; lastSync: string; stale: boolean }
 export type DemoStep = "receive" | "merge" | "priority" | "recommend" | "request" | "approve" | "block" | "replan" | "replace" | "approveReplacement" | "resolve";
 export const demoSteps: DemoStep[] = ["receive", "merge", "priority", "recommend", "request", "approve", "block", "replan", "replace", "approveReplacement", "resolve"];
 export type Scenario = "normal" | "api_failure" | "empty_incidents" | "empty_resources" | "offline" | "stale" | "loading";

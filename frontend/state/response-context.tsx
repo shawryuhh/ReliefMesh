@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { DashboardSnapshot } from "@/types";
-import { reliefService, demoService } from "@/lib/api";
+import { reliefService, demoService, getDemoDataSource, setDemoDataSource, type DemoDataSource } from "@/lib/api";
 import { matchesQueue, nextActiveIncidentId, queueIncidents, type QueueFilter } from "@/lib/presentation/incident-queue";
 import { ServiceError } from "@/lib/services/contracts";
 interface ResponseContextValue {
@@ -10,12 +10,14 @@ interface ResponseContextValue {
   select: (id: string) => void; refresh: () => Promise<void>; busy: boolean;
   act: (fn: () => Promise<void>, success?: string) => Promise<boolean>;
   notice: string | null; dismissNotice: () => void;
+  dataSource: DemoDataSource; switchDataSource: (next: DemoDataSource) => void;
 }
 const ResponseContext = createContext<ResponseContextValue | null>(null);
 export function ResponseProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dataSource, setDataSourceState] = useState<DemoDataSource>(() => getDemoDataSource());
   const [selectedId, setSelectedId] = useState("INC-1042");
   const [queueFilter, setFilter] = useState<QueueFilter>("active");
   const [resolutionId, setResolutionId] = useState<string | null>(null);
@@ -71,7 +73,19 @@ export function ResponseProvider({ children }: { children: ReactNode }) {
     catch (err) { setNotice(err instanceof ServiceError ? err.key : "error.api"); return false; }
     finally { actionLock.current = false; setBusy(false); }
   }, [refresh]);
-  return <ResponseContext.Provider value={{ data, loading, error, selectedId, queueFilter, setQueueFilter, resolutionId, select, refresh, busy, act, notice, dismissNotice: () => setNotice(null) }}>{children}</ResponseContext.Provider>;
+  const switchDataSource = useCallback((next: DemoDataSource) => {
+    setLoading(true);
+    setError(null);
+    setDataSourceState(next);
+    setDemoDataSource(next);
+  }, []);
+  return <ResponseContext.Provider value={{ data, loading, error, selectedId, queueFilter, setQueueFilter, resolutionId, select, refresh, busy, act, notice, dismissNotice: () => setNotice(null), dataSource, switchDataSource }}>{children}</ResponseContext.Provider>;
 }
 export function useResponse() { const ctx = useContext(ResponseContext); if (!ctx) throw new Error("ResponseProvider missing"); return ctx; }
-export async function recoverSimulation() { await demoService.setScenario("normal"); }
+export async function recoverSimulation() {
+  if (getDemoDataSource() === "backend") {
+    try { await demoService.setScenario("normal"); return; }
+    catch { setDemoDataSource("mock"); }
+  }
+  await demoService.setScenario("normal");
+}
