@@ -61,7 +61,7 @@ function previewHostAllowed(request: Request): boolean {
   return !forwarded && (host === "localhost" || host === "127.0.0.1" || host === "[::1]");
 }
 export async function GET(request: Request) {
-  if (!previewHostAllowed(request)) {
+  if (process.env.NODE_ENV !== "development" || !previewHostAllowed(request)) {
     return NextResponse.json({ error: "local_preview_only" }, { status: 403 });
   }
   // This preview must be explicitly enabled; avoid exposing incident/resource
