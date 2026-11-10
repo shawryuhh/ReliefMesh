@@ -39,18 +39,38 @@ async function getJson(origin: string, path: string): Promise<unknown> {
   try { return JSON.parse(body) as unknown; }
   catch { throw new BackendReadError("invalid_response"); }
 }
-export async function fetchBackendCollections(): Promise<{ incidents: unknown; resources: unknown }> {
+const PAGE_SIZE = 100;
+const MAX_PAGES = 5;
+
+/** Fetch bounded pages; never present a truncated list as complete. */
+async function paged(origin: string, endpoint: "incidents" | "resources" | "assignments"): Promise<unknown[]> {
+  const all: unknown[] = [];
+  const ids = new Set<string>();
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const result = await getJson(origin, "/" + endpoint + "?limit=" + PAGE_SIZE + "&offset=" + (page * PAGE_SIZE));
+    if (!Array.isArray(result)) throw new BackendReadError("invalid_response");
+    for (const item of result) {
+      if (!item || typeof item !== "object" || Array.isArray(item) ||
+          typeof item.id !== "string" || !item.id || ids.has(item.id))
+        throw new BackendReadError("invalid_response");
+      ids.add(item.id);
+      all.push(item);
+    }
+    if (result.length < PAGE_SIZE) return all;
+  }
+  throw new BackendReadError("invalid_response");
+}
+export async function fetchBackendCollections(): Promise<{ incidents: unknown[]; resources: unknown[] }> {
   const origin = configuredOrigin();
   const [incidents, resources] = await Promise.all([
-    getJson(origin, "/incidents?limit=100"),
-    getJson(origin, "/resources?limit=100"),
+    paged(origin, "incidents"), paged(origin, "resources"),
   ]);
   return { incidents, resources };
 }
 
-/** Read-only collection for assignment history. No mutation endpoints are exposed. */
-export async function fetchBackendAssignments(): Promise<unknown> {
-  return getJson(configuredOrigin(), "/assignments?limit=100");
+/** Read-only assignment history, with the same completeness guard. */
+export async function fetchBackendAssignments(): Promise<unknown[]> {
+  return paged(configuredOrigin(), "assignments");
 }
 
 /** Fetch one current recommendation; 404 is an expected absence, not an outage. */
