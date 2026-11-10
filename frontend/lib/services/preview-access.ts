@@ -5,6 +5,6 @@ export function previewAllowed(env: string | undefined, enabled: string | undefi
   if (env !== "development" || enabled !== "true" || forwardedHost !== null) return false;
   // IPv6 localhost may be bracketed and include a port.
   const normalized = (host ?? "").trim().toLowerCase();
-  return /^(localhost|127\\.0\\.0\\.1)(:[0-9]{1,5})?$/.test(normalized) ||
-    /^\\[::1\\](:[0-9]{1,5})?$/.test(normalized);
+  return /^(localhost|127\.0\.0\.1)(:[0-9]{1,5})?$/.test(normalized) ||
+    /^\[::1\](:[0-9]{1,5})?$/.test(normalized);
 }
