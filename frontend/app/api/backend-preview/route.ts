@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchBackendCollections, BackendReadError } from "../../../lib/services/backend-read-client";
 
 // Read-only integration preview. This endpoint does not replace the mock
 // ReliefService or expose privileged coordinator credentials to the browser.
@@ -41,42 +42,14 @@ function resource(v: unknown): v is ResourcePreview {
     resourceStatuses.has(String(v.status)) && numberOrNull(v.latitude) &&
     numberOrNull(v.longitude) && numberOrNull(v.capacity);
 }
-function origin(): string | null {
-  const configured = process.env.RELIEFMESH_BACKEND_URL;
-  if (!configured) return null;
-  try {
-    const u = new URL(configured);
-    if (u.username || u.password || u.search || u.hash || u.pathname !== "/") return null;
-    if (u.protocol !== "https:" && !(u.protocol === "http:" &&
-      ["localhost", "127.0.0.1", "::1", "[::1]"].includes(u.hostname))) return null;
-    return u.origin;
-  } catch { return null; }
-}
-async function read(origin: string, path: string): Promise<unknown> {
-  const key = process.env.RELIEFMESH_BACKEND_READ_KEY;
-  const response = await fetch(origin + path, {
-    headers: key ? { "X-API-Key": key } : {},
-    cache: "no-store",
-    redirect: "error",
-    signal: AbortSignal.timeout(5000),
-  });
-  if (!response.ok) throw new Error("backend_unavailable");
-  const body = await response.text();
-  if (body.length > 2_000_000) throw new Error("response_too_large");
-  return JSON.parse(body) as unknown;
-}
 export async function GET() {
   // This preview must be explicitly enabled; avoid exposing incident/resource
   // details on a publicly deployed frontend by default.
   if (process.env.RELIEFMESH_ENABLE_READ_PREVIEW !== "true") {
     return NextResponse.json({ error: "preview_disabled" }, { status: 404 });
   }
-  const base = origin();
-  if (!base) return NextResponse.json({ error: "backend_not_configured" }, { status: 503 });
   try {
-    const [rawIncidents, rawResources] = await Promise.all([
-      read(base, "/incidents?limit=100"), read(base, "/resources?limit=100"),
-    ]);
+    const { incidents: rawIncidents, resources: rawResources } = await fetchBackendCollections();
     if (!Array.isArray(rawIncidents) || !rawIncidents.every(incident) ||
         !Array.isArray(rawResources) || !rawResources.every(resource)) {
       return NextResponse.json({ error: "contract_mismatch" }, { status: 502 });
@@ -95,7 +68,9 @@ export async function GET() {
         capacity: r.capacity, latitude: r.latitude, longitude: r.longitude,
       })),
     }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
+  } catch (error) {
+    if (error instanceof BackendReadError && error.code === "not_configured")
+      return NextResponse.json({ error: "backend_not_configured" }, { status: 503 });
     return NextResponse.json({ error: "backend_unavailable" }, { status: 502 });
   }
 }
