@@ -1,0 +1,60 @@
+name: ReliefMesh AI and automation checks
+
+on:
+  push:
+    branches: [integration]
+    paths:
+      - 'ai/**'
+      - 'n8n/**'
+      - '.github/workflows/ai-automation-checks.yml'
+  pull_request:
+    branches: [integration]
+    paths:
+      - 'ai/**'
+      - 'n8n/**'
+      - '.github/workflows/ai-automation-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ai/requirements.txt
+      - name: Install AI dependencies
+        run: python -m pip install -r ai/requirements.txt
+      - name: Run AI service unit tests
+        working-directory: ai
+        env:
+          GOOGLE_API_KEY: ''
+          GEMINI_API_KEY: ''
+        run: python -m unittest -v test_main.py
+
+  automation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify fixture-only n8n workflow logic
+        working-directory: n8n
+        run: |
+          node --test tests/workflows.test.js
+          python -m unittest discover -s tests -p 'test_*.py'
