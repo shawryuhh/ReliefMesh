@@ -15,6 +15,7 @@ export function BackendPreview() {
   const [data,setData] = useState<Preview|null>(null);
   const latestRevision = useRef<number|null>(null);
   const [error,setError] = useState<string|null>(null);
+  const [stale,setStale] = useState(false);
   const [loading,setLoading] = useState(true);
   const [refresh,setRefresh] = useState(0);
   useEffect(()=>{
@@ -25,8 +26,8 @@ export function BackendPreview() {
         const decision = decideRevision(latestRevision.current,v.revision);
         if (decision !== "accept") throw new Error(decision === "stale" ? "Stale backend snapshot rejected" : "Invalid backend revision");
         latestRevision.current = v.revision;
-        setData(v);setError(null);})
-      .catch(e=>{if(!controller.signal.aborted){setError(e instanceof Error?e.message:"Preview failed");setData(null);}})
+        setData(v);setError(null);setStale(false);})
+      .catch(e=>{if(!controller.signal.aborted){setError(e instanceof Error?e.message:"Preview failed");setStale(true);}})
       .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
     return ()=>controller.abort();
   },[refresh]);
@@ -36,8 +37,9 @@ export function BackendPreview() {
     <p><a href="/">Return to simulated demo</a></p>
     <button type="button" onClick={()=>{setLoading(true);setRefresh(n=>n+1);}}>Refresh backend data</button>
     {loading && <p role="status">Loading backend data…</p>}
-    {error && <p role="alert">{error}. No simulated data has been substituted.</p>}
+    {error && <p role="alert">{error}. {data ? "Previously loaded data is retained for reference only and must not be treated as current." : "No backend data is available."} No simulated data has been substituted.</p>}
     {data && !loading && <>
+      {stale && <p role="alert"><strong>STALE / UNVERIFIED DATA — NOT CURRENT.</strong> Do not use these records for operational decisions.</p>}
       <p role="status">{data.incidents.length} incidents and {data.resources.length} resources returned (bounded pagination). No live synchronization is enabled.</p>
       <p>Snapshot generated: {data.generated_at}. Operational revision: {data.revision}.</p>
       <h2>Incidents</h2>
